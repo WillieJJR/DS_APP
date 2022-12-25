@@ -75,7 +75,7 @@ def kpi_four():
         ),
     ])
 
-
+#Buttons for Page 2 - Feature Exploration
 button1 = html.Button(
     'Scatter Plot',
     id='button-1',
@@ -165,8 +165,15 @@ app.layout = html.Div([
             dcc.Dropdown(
                 id='dropdown',
                 options=[],
+                placeholder = 'Please select a Column',
                 style={'color': 'black',
-                       'textAlign': 'center'},
+                       'textAlign': 'center',
+                       #'backgroundColor': 'rgba(0,0,0,0)',
+                       'width': '800px',
+                       'display': 'block',
+                       'margin': '0 auto',
+                         '.css-1wa3eu0-placeholder': {'color': 'red'}
+                       },
                 value=None
             ),
 
@@ -210,19 +217,28 @@ app.layout = html.Div([
                         dcc.Dropdown(
                             id='dropdown_x',
                             options=[],
+                            placeholder = 'Please select an X value',
                             style={'display': 'none',
                                    'color': 'black',
-                                    'textAlign': 'center'}  # initially set the dropdown to be invisible
+                                    'textAlign': 'center',
+                                   # 'backgroundColor': 'rgba(0,0,0,0)',
+                                   'width': '400px',
+                                   'display': 'block',
+                                   'margin': '0 auto',
+                                   '.css-1wa3eu0-placeholder': {'color': 'red'}
+                                   }  # initially set the dropdown to be invisible
                         )
                     ),
                     dbc.Col(
                         dcc.Dropdown(
                             id='dropdown_y',
                             options=[],
+                            placeholder = 'Please select an Y value',
                             style={'display': 'none'}  # initially set the dropdown to be invisible
                         )
                     )
-                ], style={'margin': '10px'})
+                ], style={'margin': '10px'}),
+                dbc.Row(html.Div(id='warning-message', style={'color': 'red', 'fontSize': 20, 'text-align': 'center'}))
             ])
         ]),
         dbc.Tab(label='Kmeans Predictions', children=[
@@ -567,7 +583,7 @@ def toggle_dropdown_visibility_y_var(n_clicks):
     Output('dropdown_x', 'options'),
     [Input('upload-data', 'contents'),
      Input('upload-data', 'filename')])
-def update_y_options(contents, filename):
+def update_x_options(contents, filename):
     if contents:
         df = parse_data(contents, filename)
         df = df.set_index(df.columns[0])
@@ -588,6 +604,20 @@ def update_y_options(contents, filename):
         return lst
     else:
         return []
+
+
+@app.callback(
+    Output('warning-message', 'children'),
+    [Input('dropdown_x', 'value'), Input('dropdown_y', 'value')]
+)
+def update_warning_message(dropdown_x_value, dropdown_y_value):
+    if (dropdown_x_value is not None) or (dropdown_y_value is not None):
+        if dropdown_x_value == dropdown_y_value:
+            return f'''You have selected {dropdown_x_value} for both X and Y variables. Please change one of the variables chosen!'''
+        else:
+            return ''
+    else:
+        return ''
 
 
 if __name__ == "__main__":
