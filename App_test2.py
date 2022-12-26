@@ -126,6 +126,30 @@ button_container = html.Div(
     style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}  # set the display property to flex to arrange the buttons horizontally
 )
 
+def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data):
+    if (jsonified_cleaned_data is not None) and (x_axis is not None) and (y_axis is not None):
+        df = pd.read_json(jsonified_cleaned_data, orient='split')
+        figure = px.scatter(df, x=x_axis, y=y_axis, title=f'''Scatter Plot: Relationship between {x_axis} and {y_axis}''')
+        figure.update_traces(marker=dict(color='red'))
+        figure.update_xaxes(showgrid=False)
+        figure.update_yaxes(showgrid=False)
+        figure.update_layout({
+        'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+        'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+        })
+        figure.update_layout(
+            title={
+                'y': 0.9,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+        figure.update_layout(title_font_color="white",
+                             font_color="white")
+        return dcc.Graph(id='scatter-plot', figure=figure)
+    else:
+        return html.Div(children='Please select valid x and y axis values', id='scatter-plot')
+
+
 
 app.layout = html.Div([
 
@@ -241,7 +265,10 @@ app.layout = html.Div([
                 ], style={'margin': '10px'}),
                 dbc.Row(html.Div(id='warning-message', style={'color': 'red', 'fontSize': 20, 'text-align': 'center'})),
                 #dbc.Row(html.Div(id = 'scatterplot-div', children = dcc.Graph(id='scatter-plot')))
-                dbc.Row(html.Div(id = 'scatterplot-div', children = dcc.Loading(id="loading-2", children = [dcc.Graph(id='scatter-plot')], type = 'circle')))
+                #dbc.Row(html.Div(id = 'scatterplot-div', children = dcc.Loading(id="loading-2", children = [dcc.Graph(id='scatter-plot')], type = 'circle')))
+                dbc.Row(html.Div(id='scatterplot-div', children=[
+                    html.Div(id='scatter-plot')
+                ]))
             ])
         ]),
         dbc.Tab(label='Kmeans Predictions', children=[
@@ -639,16 +666,14 @@ def update_warning_message(dropdown_x_value, dropdown_y_value):
         return ''
 
 @app.callback(
-    Output(component_id='scatter-plot', component_property='figure'),
+    Output(component_id='scatter-plot', component_property='children'),
     [Input(component_id='dropdown_x', component_property='value'),
      Input(component_id='dropdown_y', component_property='value'),
      Input('intermediate-value', 'data')
      #Input('upload-data', 'contents'),Input('upload-data', 'filename')
      ]
 )
-def update_scatter_plot(x_axis, y_axis, jsonified_cleaned_data):
-    # Create a scatter plot using the selected x and y axis values
-    figure = {}
+def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data):
     if (jsonified_cleaned_data is not None) and (x_axis is not None) and (y_axis is not None):
         df = pd.read_json(jsonified_cleaned_data, orient='split')
         figure = px.scatter(df, x=x_axis, y=y_axis, title=f'''Scatter Plot: Relationship between {x_axis} and {y_axis}''')
@@ -661,15 +686,18 @@ def update_scatter_plot(x_axis, y_axis, jsonified_cleaned_data):
         })
         figure.update_layout(
             title={
-                'text': "Plot Title",
                 'y': 0.9,
                 'x': 0.5,
                 'xanchor': 'center',
                 'yanchor': 'top'})
         figure.update_layout(title_font_color="white",
                              font_color="white")
-
-    return figure
+        return dcc.Graph(id='scatterplot', figure=figure)
+    else:
+        return html.Div([
+            html.Center(html.H4('Please make sure to select BOTH an X and Y variable to display Scatterplot')),
+            dcc.Loading(type = 'circle', children=[html.Div(id='loading-scatterplot')])
+        ])
 
 
 
