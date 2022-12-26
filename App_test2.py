@@ -203,12 +203,12 @@ app.layout = html.Div([
             ], className="row"),
         ]),
         dbc.Tab(label='Feature Exploration', children=[
-            html.H1('Understand Your variables! Please select a technique to better explore your data.', style={'text-align': 'center'}),
+            #html.H1('Understand Your variables! Please select a technique to better explore your data.', style={'text-align': 'center'}),
 
             html.Div([
                 html.Div([
                     html.Center(
-                        html.H2('Understand Your variables! Please select a technique to better explore your data.')
+                        html.H1('Understand Your variables! Please select a technique to better explore your data.')
                     )
                 ], className="row"),
 
@@ -668,6 +668,7 @@ def update_scatter_plot(x_axis, y_axis, jsonified_cleaned_data):
                 'yanchor': 'top'})
         figure.update_layout(title_font_color="white",
                              font_color="white")
+
     return figure
 
 
