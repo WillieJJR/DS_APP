@@ -7,6 +7,7 @@ import dash_bootstrap_components as dbc
 #from dash_core_components import set_theme
 from dash.dependencies import Input, Output, State
 import pandas as pd
+import plotly.express as px
 import base64
 import datetime
 import numpy as np
@@ -238,7 +239,9 @@ app.layout = html.Div([
                         )
                     )
                 ], style={'margin': '10px'}),
-                dbc.Row(html.Div(id='warning-message', style={'color': 'red', 'fontSize': 20, 'text-align': 'center'}))
+                dbc.Row(html.Div(id='warning-message', style={'color': 'red', 'fontSize': 20, 'text-align': 'center'})),
+                #dbc.Row(html.Div(id = 'scatterplot-div', children = dcc.Graph(id='scatter-plot')))
+                dbc.Row(html.Div(id = 'scatterplot-div', children = dcc.Loading(id="loading-2", children = [dcc.Graph(id='scatter-plot')], type = 'circle')))
             ])
         ]),
         dbc.Tab(label='Kmeans Predictions', children=[
@@ -401,8 +404,8 @@ def update_store_output(contents, filename ):
             "columns": [{"name": i, "id": i} for i in df.columns],
         }
         #print(store)
-        return store
-        #return df.to_json(date_format='iso', orient='split')
+        #return store
+        return df.to_json(date_format='iso', orient='split')
     else:
         return dash.no_update
 
@@ -578,6 +581,22 @@ def toggle_dropdown_visibility_y_var(n_clicks):
                 'color': 'black',
                 'textAlign': 'center'}
 
+@app.callback(
+    Output(component_id='scatterplot-div', component_property='style'),
+    [Input('button-1', 'n_clicks')]
+)
+def update_scatterplot_visibility(n_clicks):
+
+    if n_clicks is None:
+        return {'display': 'none'}
+    if n_clicks % 2 == 0:
+        # Make the dropdown invisible when the button is clicked an even number of times
+        return {'display': 'none'}
+    else:
+        # Make the dropdown visible when the button is clicked an odd number of times
+        {'display': 'block'}
+
+
 
 @app.callback(
     Output('dropdown_x', 'options'),
@@ -618,6 +637,40 @@ def update_warning_message(dropdown_x_value, dropdown_y_value):
             return ''
     else:
         return ''
+
+@app.callback(
+    Output(component_id='scatter-plot', component_property='figure'),
+    [Input(component_id='dropdown_x', component_property='value'),
+     Input(component_id='dropdown_y', component_property='value'),
+     Input('intermediate-value', 'data')
+     #Input('upload-data', 'contents'),Input('upload-data', 'filename')
+     ]
+)
+def update_scatter_plot(x_axis, y_axis, jsonified_cleaned_data):
+    # Create a scatter plot using the selected x and y axis values
+    figure = {}
+    if (jsonified_cleaned_data is not None) and (x_axis is not None) and (y_axis is not None):
+        df = pd.read_json(jsonified_cleaned_data, orient='split')
+        figure = px.scatter(df, x=x_axis, y=y_axis, title=f'''Scatter Plot: Relationship between {x_axis} and {y_axis}''')
+        figure.update_traces(marker=dict(color='red'))
+        figure.update_xaxes(showgrid=False)
+        figure.update_yaxes(showgrid=False)
+        figure.update_layout({
+        'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+        'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+        })
+        figure.update_layout(
+            title={
+                'text': "Plot Title",
+                'y': 0.9,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+        figure.update_layout(title_font_color="white",
+                             font_color="white")
+    return figure
+
+
 
 
 if __name__ == "__main__":
