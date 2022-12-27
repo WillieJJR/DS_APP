@@ -7,6 +7,8 @@ import dash_bootstrap_components as dbc
 #from dash_core_components import set_theme
 from dash.dependencies import Input, Output, State
 import pandas as pd
+from scipy.stats import linregress
+from scipy.stats import spearmanr
 import plotly.express as px
 import base64
 import datetime
@@ -681,6 +683,9 @@ def update_warning_message(dropdown_x_value, dropdown_y_value):
 def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data):
     if (jsonified_cleaned_data is not None) and (x_axis is not None) and (y_axis is not None):
         df = pd.read_json(jsonified_cleaned_data, orient='split')
+
+        slope, intercept, r_value, p_value, std_err = linregress(df[x_axis], df[y_axis])
+
         figure = px.scatter(df, x=x_axis, y=y_axis, title=f'''Scatter Plot: Relationship between {x_axis} and {y_axis}''')
         figure.update_traces(marker=dict(color='red'))
         figure.update_xaxes(showgrid=False)
@@ -697,6 +702,12 @@ def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data):
                 'yanchor': 'top'})
         figure.update_layout(title_font_color="white",
                              font_color="white")
+
+        figure.add_scatter(x=df[x_axis], y=intercept + slope * df[x_axis], mode='lines',
+                        name='Regression Line')
+        r_squared = r_value ** 2
+        figure.add_annotation(x=0.9, y=0.9, text=f'R-squared = {r_squared:.3f}')
+
         return dcc.Graph(id='scatterplot', figure=figure)
     else:
         return html.Div([
