@@ -9,6 +9,7 @@ from dash.dependencies import Input, Output, State
 import pandas as pd
 from scipy.stats import linregress
 from scipy.stats import spearmanr
+import plotly.graph_objects as go
 import plotly.express as px
 import base64
 import datetime
@@ -234,6 +235,13 @@ app.layout = html.Div([
                 ], className="row"),
 
                 dbc.Row([button_container]),
+                dbc.Row([dcc.Dropdown(
+                            id='dropdown_corr',
+                            options=[],
+                            multi = True,
+                            placeholder = 'Please select values for Correlation Plot',
+                            style={'display': 'none'}  # initially set the dropdown to be invisible
+                    )], style={'margin': '10px'}),
                 dbc.Row([
                     dbc.Col(
                         dcc.Dropdown(
@@ -258,13 +266,16 @@ app.layout = html.Div([
                             placeholder = 'Please select an Y value',
                             style={'display': 'none'}  # initially set the dropdown to be invisible
                         )
-                    )
+                        )
                 ], style={'margin': '10px'}),
                 dbc.Row(html.Div(id='warning-message', style={'color': 'red', 'fontSize': 20, 'text-align': 'center'})),
                 #dbc.Row(html.Div(id = 'scatterplot-div', children = dcc.Graph(id='scatter-plot')))
                 #dbc.Row(html.Div(id = 'scatterplot-div', children = dcc.Loading(id="loading-2", children = [dcc.Graph(id='scatter-plot')], type = 'circle')))
                 dbc.Row(html.Div(id='scatterplot-div', children=[
                     html.Div(id='scatter-plot')
+                ])),
+                dbc.Row(html.Div(id='corr-plot-div', children=[
+                    html.Div(id='corr-plot')
                 ]))
             ])
         ]),
@@ -553,7 +564,65 @@ def kpi_four(value, contents, filename):
 
 ###testing
 
+@app.callback(
+    dash.dependencies.Output('button-1', 'style'),
+    [dash.dependencies.Input('button-1', 'n_clicks')]
+)
+def update_scatterplot_button_style(n_clicks):
+    if n_clicks is not None and n_clicks % 2 == 1:
+        # Change the button color to green when it is clicked an odd number of times
+        return {
+        'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+        'color': 'white',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+        'height': '60px',  # set the height of the buttons
+        'width': '150px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+    else:
+        # Reset the button color to the default when it is clicked an even number of times
+        return {
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'white',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+        'height': '60px',  # set the height of the buttons
+        'width': '150px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
 
+@app.callback(
+    dash.dependencies.Output('button-2', 'style'),
+    [dash.dependencies.Input('button-2', 'n_clicks')]
+)
+def update_correlationplot_style(n_clicks):
+    if n_clicks is not None and n_clicks % 2 == 1:
+        # Change the button color to green when it is clicked an odd number of times
+        return {
+        'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+        'color': 'white',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+        'height': '60px',  # set the height of the buttons
+        'width': '150px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+    else:
+        # Reset the button color to the default when it is clicked an even number of times
+        return {
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'white',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+        'height': '60px',  # set the height of the buttons
+        'width': '150px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
 
 ###testing
 
@@ -563,26 +632,27 @@ def kpi_four(value, contents, filename):
         dash.dependencies.Output('dropdown_x', 'value'),
     ],
     [
-        dash.dependencies.Input('button-1', 'n_clicks')
+        dash.dependencies.Input('button-1', 'n_clicks'),
+        #dash.dependencies.Input('button-2', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_x_var(n_clicks):
-    if n_clicks is None:
+def toggle_dropdown_visibility_x_var(button_1_click):
+    if button_1_click is None:
         return [
             {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
         ]
 
-    if n_clicks % 2 == 0:
-        # Make the dropdown invisible and reset the value when the button is clicked an even number of times
+    if button_1_click is not None and button_1_click % 2 == 1:
+        # Make the dropdown visible when Button 1 is clicked an odd number of times
         return [
-            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
             None
         ]
     else:
-        # Make the dropdown visible when the button is clicked an odd number of times
+        # Make the dropdown invisible and reset the value when either button is clicked an even number of times
         return [
-            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
         ]
 
@@ -592,26 +662,57 @@ def toggle_dropdown_visibility_x_var(n_clicks):
         dash.dependencies.Output('dropdown_y', 'value'),
     ],
     [
-        dash.dependencies.Input('button-1', 'n_clicks')
+        dash.dependencies.Input('button-1', 'n_clicks'),
+        #dash.dependencies.Input('button-2', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_y_var(n_clicks):
-    if n_clicks is None:
+def toggle_dropdown_visibility_y_var(button_1_click):
+    if button_1_click is None:
         return [
             {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
         ]
 
-    if n_clicks % 2 == 0:
-        # Make the dropdown invisible and reset the value when the button is clicked an even number of times
+    if button_1_click is not None and button_1_click % 2 == 1:
+        # Make the dropdown visible when Button 1 is clicked an odd number of times
+        return [
+            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+    else:
+        # Make the dropdown invisible and reset the value when either button is clicked an even number of times
         return [
             {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
         ]
-    else:
-        # Make the dropdown visible when the button is clicked an odd number of times
+
+@app.callback(
+    [
+        dash.dependencies.Output('dropdown_corr', 'style'),
+        dash.dependencies.Output('dropdown_corr', 'value'),
+    ],
+    [
+        dash.dependencies.Input('button-2', 'n_clicks'),
+        #dash.dependencies.Input('button-2', 'n_clicks')
+    ]
+)
+def toggle_dropdown_visibility_corr_var(button_corr_click):
+    if button_corr_click is None:
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+
+    if button_corr_click is not None and button_corr_click % 2 == 1:
+        # Make the dropdown visible when Button 1 is clicked an odd number of times
         return [
             {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+    else:
+        # Make the dropdown invisible and reset the value when either button is clicked an even number of times
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
         ]
 
@@ -630,6 +731,21 @@ def update_scatterplot_visibility(n_clicks):
         # Make the dropdown visible when the button is clicked an odd number of times
         {'display': 'block'}
 
+
+@app.callback(
+    Output(component_id='corr-plot-div', component_property='style'),
+    [Input('button-2', 'n_clicks')]
+)
+def update_corplot_visibility(n_clicks):
+
+    if n_clicks is None:
+        return {'display': 'none'}
+    if n_clicks % 2 == 0:
+        # Make the dropdown invisible when the button is clicked an even number of times
+        return {'display': 'none'}
+    else:
+        # Make the dropdown visible when the button is clicked an odd number of times
+        {'display': 'block'}
 
 
 @app.callback(
@@ -658,6 +774,19 @@ def update_y_options(contents, filename):
     else:
         return []
 
+@app.callback(
+    Output('dropdown_corr', 'options'),
+    [Input('upload-data', 'contents'),
+     Input('upload-data', 'filename')])
+def update_corr_options(contents, filename):
+    if contents:
+        df = parse_data(contents, filename)
+        df = df.set_index(df.columns[0])
+        lst = [{'label': i, 'value': i} for i in df.columns]
+        return lst
+    else:
+        return []
+
 
 @app.callback(
     Output('warning-message', 'children'),
@@ -676,47 +805,95 @@ def update_warning_message(dropdown_x_value, dropdown_y_value):
     Output(component_id='scatter-plot', component_property='children'),
     [Input(component_id='dropdown_x', component_property='value'),
      Input(component_id='dropdown_y', component_property='value'),
-     Input('intermediate-value', 'data')
-     #Input('upload-data', 'contents'),Input('upload-data', 'filename')
+     Input('intermediate-value', 'data'),
+     Input('button-1', 'n_clicks')
      ]
 )
-def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data):
-    if (jsonified_cleaned_data is not None) and (x_axis is not None) and (y_axis is not None):
-        df = pd.read_json(jsonified_cleaned_data, orient='split')
+def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data, n_clicks):
+    if n_clicks is not None:
+        if (jsonified_cleaned_data is not None) and (x_axis is not None) and (y_axis is not None):
+            df = pd.read_json(jsonified_cleaned_data, orient='split')
 
-        slope, intercept, r_value, p_value, std_err = linregress(df[x_axis], df[y_axis])
+            slope, intercept, r_value, p_value, std_err = linregress(df[x_axis], df[y_axis])
 
-        figure = px.scatter(df, x=x_axis, y=y_axis, title=f'''Scatter Plot: Relationship between {x_axis} and {y_axis}''')
-        figure.update_traces(marker=dict(color='red'))
-        figure.update_xaxes(showgrid=False)
-        figure.update_yaxes(showgrid=False)
-        figure.update_layout({
-        'plot_bgcolor': 'rgba(0, 0, 0, 0)',
-        'paper_bgcolor': 'rgba(0, 0, 0, 0)',
-        })
-        figure.update_layout(
-            title={
-                'y': 0.9,
-                'x': 0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'})
-        figure.update_layout(title_font_color="white",
-                             font_color="white")
+            figure = px.scatter(df, x=x_axis, y=y_axis, title=f'''Scatter Plot: Relationship between {x_axis} and {y_axis}''')
+            figure.update_traces(marker=dict(color='red'))
+            figure.update_xaxes(showgrid=False)
+            figure.update_yaxes(showgrid=False)
+            figure.update_layout({
+            'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+            'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+            })
+            figure.update_layout(
+                title={
+                    'y': 0.9,
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top'})
+            figure.update_layout(title_font_color="white",
+                                 font_color="white")
 
-        figure.add_scatter(x=df[x_axis], y=intercept + slope * df[x_axis], mode='lines',
-                        name='Regression Line')
-        r_squared = r_value ** 2
-        figure.add_annotation(x=0.9, y=0.9, text=f'R-squared = {r_squared:.3f}')
+            figure.add_scatter(x=df[x_axis], y=intercept + slope * df[x_axis], mode='lines',
+                            name='Regression Line')
+            r_squared = r_value ** 2
+            figure.add_annotation(x=0.9, y=0.9, text=f'R-squared = {r_squared:.3f}')
 
-        return dcc.Graph(id='scatterplot', figure=figure)
+            return dcc.Graph(id='scatterplot', figure=figure)
+        else:
+            return html.Div([
+                html.Center(html.H4('Please make sure to select BOTH an X and Y variable to display Scatterplot')),
+                dcc.Loading(type = 'circle', children=[html.Div(id='loading-scatterplot')])
+            ])
     else:
         return html.Div([
-            html.Center(html.H4('Please make sure to select BOTH an X and Y variable to display Scatterplot')),
-            dcc.Loading(type = 'circle', children=[html.Div(id='loading-scatterplot')])
-        ])
+                html.Center(html.H4('Please make sure Scatter Plot button is active!'))
+            ])
 
 
+@app.callback(
+    Output(component_id='corr-plot', component_property='children'),
+    [Input(component_id='dropdown_corr', component_property='value'),
+     Input('intermediate-value', 'data'),
+     #Input('button-2', 'n_clicks')
+     ]
+)
+def update_corrplot(selected_features, jsonified_cleaned_data):
+    #if n_clicks is not None and selected_features is not None:
+    if selected_features is not None:
+        print(selected_features)
+        if len(selected_features) < 2:
+            return html.Div([
+                html.Center(html.H4('Please select at least 2 features!'))
+            ])
+        else:
+            if (jsonified_cleaned_data is not None) and (selected_features is not None):
+                df = pd.read_json(jsonified_cleaned_data, orient='split')
 
+                z = df[selected_features].corr().values
+                text = [[f'{z[i][j]:.2f}' for j in range(len(selected_features))] for i in
+                        range(len(selected_features))]
+
+                data = [go.Heatmap(x=selected_features, y=selected_features, z=z, text=text,
+                                   colorscale=[[0, 'rgb(255, 0, 0)'], [1, 'rgb(0, 0, 255)']],
+                                   colorbar=dict(title=f'''Correlation for variables: {selected_features}''', tickformat='.2f', tickmode='array',
+                                                 tickvals=[-1, 0, 1],
+                                                 ticktext=['-1', '0', '1'],
+                                                 )
+                                   )]
+
+                layout = go.Layout()
+
+                fig = go.Figure(data=data, layout=layout)
+                return dcc.Graph(id='corr-plot', figure=fig)
+            else:
+                return html.Div([
+                    html.Center(html.H4('Please make sure to select values to display Correlation Plot')),
+                    dcc.Loading(type = 'circle', children=[html.Div(id='loading-scatterplot')])
+                ])
+    else:
+        return html.Div([
+                html.Center(html.H4('Please make sure Scatter Plot button is active!'))
+            ])
 
 if __name__ == "__main__":
     app.run_server(debug=True)
