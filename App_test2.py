@@ -120,34 +120,29 @@ button3 = html.Button(
     }
 )
 
+button_reset = html.Button(
+    'Reset Dropdown Options',
+    id='button-reset',
+    n_clicks=0,
+    n_clicks_timestamp=0,
+    style={
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'red',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+        'height': '60px',  # set the height of the buttons
+        'width': '150px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+)
+
 # Use the html.Div component to create a container for the buttons
 button_container = html.Div(
     children=[button1, button2, button3],
     style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}  # set the display property to flex to arrange the buttons horizontally
 )
 
-def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data):
-    if (jsonified_cleaned_data is not None) and (x_axis is not None) and (y_axis is not None):
-        df = pd.read_json(jsonified_cleaned_data, orient='split')
-        figure = px.scatter(df, x=x_axis, y=y_axis, title=f'''Scatter Plot: Relationship between {x_axis} and {y_axis}''')
-        figure.update_traces(marker=dict(color='red'))
-        figure.update_xaxes(showgrid=False)
-        figure.update_yaxes(showgrid=False)
-        figure.update_layout({
-        'plot_bgcolor': 'rgba(0, 0, 0, 0)',
-        'paper_bgcolor': 'rgba(0, 0, 0, 0)',
-        })
-        figure.update_layout(
-            title={
-                'y': 0.9,
-                'x': 0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'})
-        figure.update_layout(title_font_color="white",
-                             font_color="white")
-        return dcc.Graph(id='scatter-plot', figure=figure)
-    else:
-        return html.Div(children='Please select valid x and y axis values', id='scatter-plot')
 
 
 
@@ -414,7 +409,6 @@ def parse_data(contents, filename):
 
     return df
 
-###testing
 
 
 @app.callback(Output('intermediate-value', 'data'),
@@ -436,12 +430,6 @@ def update_store_output(contents, filename ):
     else:
         return dash.no_update
 
-
-
-
-
-
-###testing
 
 
 
@@ -561,52 +549,69 @@ def kpi_four(value, contents, filename):
         return f'''{no_contents}'''
 
 
+###testing
+
+
+
+###testing
 
 @app.callback(
-    Output('dropdown_x', 'style'),
-    [Input('button-1', 'n_clicks')]
+    [
+        dash.dependencies.Output('dropdown_x', 'style'),
+        dash.dependencies.Output('dropdown_x', 'value'),
+    ],
+    [
+        dash.dependencies.Input('button-1', 'n_clicks')
+    ]
 )
-
 def toggle_dropdown_visibility_x_var(n_clicks):
     if n_clicks is None:
-        return {'display': 'none',
-                'color': 'black',
-                'textAlign': 'center'
-                }
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+
     if n_clicks % 2 == 0:
-        # Make the dropdown invisible when the button is clicked an even number of times
-        return {'display': 'none',
-                'color': 'black',
-                'textAlign': 'center'
-                }
+        # Make the dropdown invisible and reset the value when the button is clicked an even number of times
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
     else:
         # Make the dropdown visible when the button is clicked an odd number of times
-        return {'display': 'block',
-                'color': 'black',
-                'textAlign': 'center'}
+        return [
+            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
 
 @app.callback(
-    Output('dropdown_y', 'style'),
-    [Input('button-1', 'n_clicks')]
+    [
+        dash.dependencies.Output('dropdown_y', 'style'),
+        dash.dependencies.Output('dropdown_y', 'value'),
+    ],
+    [
+        dash.dependencies.Input('button-1', 'n_clicks')
+    ]
 )
-
 def toggle_dropdown_visibility_y_var(n_clicks):
     if n_clicks is None:
-        return {'display': 'none',
-                'color': 'black',
-                'textAlign': 'center'
-                }
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+
     if n_clicks % 2 == 0:
-        # Make the dropdown invisible when the button is clicked an even number of times
-        return {'display': 'none',
-                'color': 'black',
-                'textAlign': 'center'
-                }
+        # Make the dropdown invisible and reset the value when the button is clicked an even number of times
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
     else:
         # Make the dropdown visible when the button is clicked an odd number of times
-        return {'display': 'block',
-                'color': 'black',
-                'textAlign': 'center'}
+        return [
+            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
 
 @app.callback(
     Output(component_id='scatterplot-div', component_property='style'),
