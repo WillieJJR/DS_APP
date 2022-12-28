@@ -235,19 +235,36 @@ app.layout = html.Div([
                 ], className="row"),
 
                 dbc.Row([button_container]),
-                dbc.Row([dcc.Dropdown(
-                            id='dropdown_violin',
+                dbc.Row([dbc.Col(
+                        dcc.Dropdown(
+                            id='dropdown_corr_x',
                             options=[],
-                            multi = False,
-                            placeholder = 'Please select values for Correlation Plot',
+                            placeholder = 'Please select an X value for distribution plot',
+                            style={'display': 'none',
+                                   'color': 'black',
+                                    'textAlign': 'center',
+                                   # 'backgroundColor': 'rgba(0,0,0,0)',
+                                   'width': '400px',
+                                   'display': 'block',
+                                   'margin': '0 auto',
+                                   '.css-1wa3eu0-placeholder': {'color': 'red'}
+                                   }  # initially set the dropdown to be invisible
+                        )
+                    ),
+                    dbc.Col(
+                        dcc.Dropdown(
+                            id='dropdown_corr_y',
+                            options=[],
+                            placeholder = 'Please select an Y value',
                             style={'display': 'none'}  # initially set the dropdown to be invisible
-                    )], style={'margin': '10px'}),
+                        )
+                        )], style={'margin': '10px'}),
                 dbc.Row([
                     dbc.Col(
                         dcc.Dropdown(
                             id='dropdown_x',
                             options=[],
-                            placeholder = 'Please select an X value',
+                            placeholder = 'Please select an X value ',
                             style={'display': 'none',
                                    'color': 'black',
                                     'textAlign': 'center',
@@ -275,8 +292,7 @@ app.layout = html.Div([
                     html.Div(id='scatter-plot')
                 ])),
                 dbc.Row(html.Div(id='corr-plot-div', children=[
-                    html.Div(id='violin-plot'),
-                    html.Div(id = 'hist-plot')
+                    html.Div(id='corr-plot')
                 ]))
             ])
         ]),
@@ -689,15 +705,45 @@ def toggle_dropdown_visibility_y_var(button_1_click):
 
 @app.callback(
     [
-        dash.dependencies.Output('dropdown_violin', 'style'),
-        dash.dependencies.Output('dropdown_violin', 'value'),
+        dash.dependencies.Output('dropdown_corr_x', 'style'),
+        dash.dependencies.Output('dropdown_corr_x', 'value'),
     ],
     [
         dash.dependencies.Input('button-2', 'n_clicks'),
         #dash.dependencies.Input('button-2', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_corr_var(button_corr_click):
+def toggle_dropdown_visibility_corr_var_x(button_corr_click):
+    if button_corr_click is None:
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+
+    if button_corr_click is not None and button_corr_click % 2 == 1:
+        # Make the dropdown visible when Button 1 is clicked an odd number of times
+        return [
+            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+    else:
+        # Make the dropdown invisible and reset the value when either button is clicked an even number of times
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+
+@app.callback(
+    [
+        dash.dependencies.Output('dropdown_corr_y', 'style'),
+        dash.dependencies.Output('dropdown_corr_y', 'value'),
+    ],
+    [
+        dash.dependencies.Input('button-2', 'n_clicks'),
+        #dash.dependencies.Input('button-2', 'n_clicks')
+    ]
+)
+def toggle_dropdown_visibility_corr_var_y(button_corr_click):
     if button_corr_click is None:
         return [
             {'display': 'none', 'color': 'black', 'textAlign': 'center'},
@@ -776,7 +822,7 @@ def update_y_options(contents, filename):
         return []
 
 @app.callback(
-    Output('dropdown_violin', 'options'),
+    Output('dropdown_corr_x', 'options'),
     [Input('upload-data', 'contents'),
      Input('upload-data', 'filename')])
 def update_corr_options(contents, filename):
@@ -788,6 +834,18 @@ def update_corr_options(contents, filename):
     else:
         return []
 
+@app.callback(
+    Output('dropdown_corr_y', 'options'),
+    [Input('upload-data', 'contents'),
+     Input('upload-data', 'filename')])
+def update_corr_options(contents, filename):
+    if contents:
+        df = parse_data(contents, filename)
+        df = df.set_index(df.columns[0])
+        lst = [{'label': i, 'value': i} for i in df.columns]
+        return lst
+    else:
+        return []
 
 @app.callback(
     Output('warning-message', 'children'),
@@ -852,97 +910,52 @@ def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data, n_clicks):
 
 
 @app.callback(
-    Output(component_id='violin-plot', component_property='children'),
-    [Input(component_id='dropdown_violin', component_property='value'),
-     Input('intermediate-value', 'data'),
-     Input('button-2', 'n_clicks')
+    Output(component_id='corr-plot', component_property='children'),
+    [Input(component_id='dropdown_corr_x', component_property='value'),
+    Input(component_id='dropdown_corr_y', component_property='value'),
+     Input('intermediate-value', 'data'), Input('button-2', 'n_clicks')
      ]
 )
-def update_violinplot(violin_value, jsonified_cleaned_data, n_clicks):
+def update_corrplot(x_axis, y_axis, jsonified_cleaned_data, n_clicks):
     if n_clicks is not None:
-        if (jsonified_cleaned_data is not None) and (violin_value is not None):
+        if (jsonified_cleaned_data is not None) and (x_axis is not None) and (y_axis is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
+            # Create histogram trace
+            histogram_trace = go.Histogram(
+                x=df[x_axis],
+                yaxis='y',
+                name=x_axis
+            )
 
             # Create density trace
             density_trace = go.Violin(
-                x=df[violin_value],
+                x=df[x_axis],
                 yaxis='y2',
                 points='all',
-                name=violin_value,
-                box=dict(visible=False),  # draw box around 25th and 75th percentiles
-                #meanline=dict(visible=True),  # draw line indicating mean value
-                #marker=dict(color='red')
+                name=x_axis,
+                box=dict(visible=False)
             )
 
             # Create figure object with two y-axes
             fig = go.Figure(data=[density_trace])
 
-            # Set layout properties
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',  # set background color to transparent
-                font=dict(color='white'),  # set font color to white
-                plot_bgcolor='rgba(0,0,0,0)',  # set plot background color to transparent
-                xaxis=dict(showgrid=False),  # remove x-axis gridlines
-                yaxis=dict(showgrid=False),
-                height=275# remove y-axis gridlines
-            )
+            # Set y-axis properties
 
-            return dcc.Graph(id='violin-plot', figure=fig)
 
-            # return dcc.Graph(id='corr-plot', figure=fig)
+            return dcc.Graph(id='corr-plot', figure=fig)
+
+
+
+                #return dcc.Graph(id='corr-plot', figure=fig)
         else:
             return html.Div([
                 html.Center(html.H4('Please make sure to select values to display Correlation Plot')),
-                dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
+                dcc.Loading(type = 'circle', children=[html.Div(id='loading-corrplot')])
             ])
     else:
         return html.Div([
-            html.Center(html.H4('Please make sure Scatter Plot button is active!'))
-        ])
-
-
-@app.callback(
-    Output(component_id='hist-plot', component_property='children'),
-    [Input(component_id='dropdown_violin', component_property='value'),
-     Input('intermediate-value', 'data'),
-     Input('button-2', 'n_clicks')
-     ]
-)
-
-def update_histplot(violin_value, jsonified_cleaned_data, n_clicks):
-    if n_clicks is not None:
-        if (jsonified_cleaned_data is not None) and (violin_value is not None):
-            df = pd.read_json(jsonified_cleaned_data, orient='split')
-            # Create histogram trace
-            histogram_trace = go.Histogram(
-                x=df[violin_value],
-                yaxis='y',
-                name=violin_value
-            )
-
-
-
-            # Create figure object with two y-axes
-            fig = go.Figure(data=[histogram_trace])
-
-            # Set layout properties
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)', # set background color to transparent
-                font=dict(color='white'),  # set font color to white
-                xaxis=dict(showgrid=False),  # remove x-axis gridlines
-                yaxis=dict(showgrid=False)  # remove y-axis gridlines
-            )
-
-
-
-            return dcc.Graph(id='hist-plot', figure=fig)
-
-
-    else:
-        return html.Div([
-            html.Center(html.H4('Please make sure Scatter Plot button is active!'))
-        ])
+                html.Center(html.H4('Please make sure Scatter Plot button is active!'))
+            ])
 
 if __name__ == "__main__":
     app.run_server(debug=True)
