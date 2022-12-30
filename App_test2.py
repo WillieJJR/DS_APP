@@ -238,7 +238,6 @@ app.layout = html.Div([
                 dbc.Row([dcc.Dropdown(
                             id='dropdown_violin',
                             options=[],
-                            multi = False,
                             placeholder = 'Please select values for Correlation Plot',
                             style={'display': 'none'}  # initially set the dropdown to be invisible
                     )], style={'margin': '10px'}),
@@ -925,44 +924,59 @@ def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data, n_clicks):
 
 
 @app.callback(
-    Output(component_id='violin-plot', component_property='children'),
+    Output('corr-plot-div', 'children'),
     [Input(component_id='dropdown_violin', component_property='value'),
      Input('intermediate-value', 'data'),
      Input('button-2', 'n_clicks')
      ]
 )
-def update_violinplot(violin_value, jsonified_cleaned_data, n_clicks):
+def update_plots(violin_value, jsonified_cleaned_data, n_clicks):
     if n_clicks is not None:
         if (jsonified_cleaned_data is not None) and (violin_value is not None):
-            print(violin_value) #value is being collected
             df = pd.read_json(jsonified_cleaned_data, orient='split')
 
             # Create density trace
             density_trace = go.Violin(
                 x=df[violin_value],
-                yaxis='y2',
                 points='all',
                 name=violin_value,
-                box=dict(visible=False),  # draw box around 25th and 75th percentiles
-                #meanline=dict(visible=True),  # draw line indicating mean value
-                #marker=dict(color='red')
+                box=dict(visible=False),
             )
 
-            # Create figure object with two y-axes
-            fig = go.Figure(data=[density_trace])
+            # Create histogram trace
+            histogram_trace = go.Histogram(
+                x=df[violin_value],
+                name=violin_value
+            )
 
-            # Set layout properties
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',  # set background color to transparent
+            # Create figure object for the violin plot
+            violin_fig = go.Figure(data=[density_trace])
+
+            # Set layout properties for the violin plot
+            violin_fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',  # set background color to transparent
                 font=dict(color='white'),  # set font color to white
-                plot_bgcolor='rgba(0,0,0,0)',  # set plot background color to transparent
                 xaxis=dict(showgrid=False),  # remove x-axis gridlines
-                yaxis=dict(showgrid=False),
-                height=275# remove y-axis gridlines
+                yaxis=dict(showgrid=False),  # remove y-axis gridlines
             )
 
-            return dcc.Graph(id='violin-plot', figure=fig)
+            # Create figure object for the histogram plot
+            hist_fig = go.Figure(data=[histogram_trace])
 
+            # Set layout properties for the histogram plot
+            hist_fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',  # set background color to transparent
+                font=dict(color='white'),  # set font color to white
+                xaxis=dict(showgrid=False),  # remove x-axis gridlines
+                yaxis=dict(showgrid=False),  # remove y-axis gridlines
+            )
+
+            return [
+                dcc.Graph(id='violin-plot', figure=violin_fig),
+                dcc.Graph(id='hist-plot', figure=hist_fig)
+            ]
         elif violin_value is None and n_clicks % 2 == 1:
             return html.Div([
                 html.Center(html.H4('Please make sure to select values to display Correlation Plot')),
@@ -972,54 +986,6 @@ def update_violinplot(violin_value, jsonified_cleaned_data, n_clicks):
             return html.Div([
                 html.Center(html.H4('testing'))
             ])
-
-
-@app.callback(
-    Output(component_id='hist-plot', component_property='children'),
-    [Input(component_id='dropdown_violin', component_property='value'),
-     Input('intermediate-value', 'data'),
-     Input('button-2', 'n_clicks')
-     ]
-)
-
-def update_histplot(violin_value, jsonified_cleaned_data, n_clicks):
-    if n_clicks is not None:
-        if (jsonified_cleaned_data is not None) and (violin_value is not None):
-            df = pd.read_json(jsonified_cleaned_data, orient='split')
-            # Create histogram trace
-            histogram_trace = go.Histogram(
-                x=df[violin_value],
-                yaxis='y',
-                name=violin_value
-            )
-
-
-
-            # Create figure object with two y-axes
-            fig = go.Figure(data=[histogram_trace])
-
-            # Set layout properties
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)', # set background color to transparent
-                font=dict(color='white'),  # set font color to white
-                xaxis=dict(showgrid=False),  # remove x-axis gridlines
-                yaxis=dict(showgrid=False)  # remove y-axis gridlines
-            )
-
-
-
-            return dcc.Graph(id='hist-plot', figure=fig)
-
-        elif violin_value is None and n_clicks % 2 == 1:
-            return html.Div([
-                html.Center(html.H4('Please make sure to select values to display Correlation Plot')),
-                dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
-            ])
-    else:
-        return html.Div([
-            html.Center(html.H4('testing'))
-        ])
 
 if __name__ == "__main__":
     app.run_server(debug=True)

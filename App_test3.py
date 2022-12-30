@@ -235,36 +235,19 @@ app.layout = html.Div([
                 ], className="row"),
 
                 dbc.Row([button_container]),
-                dbc.Row([dbc.Col(
-                        dcc.Dropdown(
-                            id='dropdown_corr_x',
+                dbc.Row([dcc.Dropdown(
+                            id='dropdown_violin',
                             options=[],
-                            placeholder = 'Please select an X value for distribution plot',
-                            style={'display': 'none',
-                                   'color': 'black',
-                                    'textAlign': 'center',
-                                   # 'backgroundColor': 'rgba(0,0,0,0)',
-                                   'width': '400px',
-                                   'display': 'block',
-                                   'margin': '0 auto',
-                                   '.css-1wa3eu0-placeholder': {'color': 'red'}
-                                   }  # initially set the dropdown to be invisible
-                        )
-                    ),
-                    dbc.Col(
-                        dcc.Dropdown(
-                            id='dropdown_corr_y',
-                            options=[],
-                            placeholder = 'Please select an Y value',
+                            multi = False,
+                            placeholder = 'Please select values for Correlation Plot',
                             style={'display': 'none'}  # initially set the dropdown to be invisible
-                        )
-                        )], style={'margin': '10px'}),
+                    )], style={'margin': '10px'}),
                 dbc.Row([
                     dbc.Col(
                         dcc.Dropdown(
                             id='dropdown_x',
                             options=[],
-                            placeholder = 'Please select an X value ',
+                            placeholder = 'Please select an X value',
                             style={'display': 'none',
                                    'color': 'black',
                                     'textAlign': 'center',
@@ -292,8 +275,9 @@ app.layout = html.Div([
                     html.Div(id='scatter-plot')
                 ])),
                 dbc.Row(html.Div(id='corr-plot-div', children=[
-                    html.Div(id='corr-plot')
-                ]))
+                    html.Div(id='violin-plot'),
+                    html.Div(id = 'hist-plot')
+                ])),
             ])
         ]),
         dbc.Tab(label='Kmeans Predictions', children=[
@@ -582,64 +566,107 @@ def kpi_four(value, contents, filename):
 ###testing
 
 @app.callback(
-    dash.dependencies.Output('button-1', 'style'),
-    [dash.dependencies.Input('button-1', 'n_clicks')]
+    dash.dependencies.Output('button-1', 'n_clicks'),
+    dash.dependencies.Output('button-2', 'n_clicks'),
+    [dash.dependencies.Input('button-1', 'n_clicks'),
+     dash.dependencies.Input('button-2', 'n_clicks')]
 )
-def update_scatterplot_button_style(n_clicks):
-    if n_clicks is not None and n_clicks % 2 == 1:
+def reset_button_clicks(n_clicks_1, n_clicks_2):
+    if n_clicks_1 is not None and n_clicks_1 % 2 == 1 and n_clicks_2 is not None and n_clicks_2 % 2 == 1:
+        # Reset the n_clicks of both buttons to 0
+        return 0, 0
+    else:
+        # Return the current n_clicks of both buttons
+        return n_clicks_1, n_clicks_2
+
+@app.callback(
+    dash.dependencies.Output('button-1', 'style'),
+    [dash.dependencies.Input('button-1', 'n_clicks'),
+     dash.dependencies.Input('button-2', 'n_clicks')]
+)
+def update_scatterplot_button_style(n_clicks_1, n_clicks_2):
+
+    if n_clicks_2 is not None and n_clicks_2 % 2 == 1:
+        # Reset the button color to the default when button-2 is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_1 is not None and n_clicks_1 % 2 == 1:
         # Change the button color to green when it is clicked an odd number of times
         return {
-        'backgroundColor': 'rgba(0, 255, 0, 0.5)',
-        'color': 'white',
-        'text-align': 'center',
-        'margin-right': '10px',  # add a right margin to create a space between the buttons
-        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
-        'height': '60px',  # set the height of the buttons
-        'width': '150px',  # set the width of the buttons
-        'font-size': '16px'  # set the font size of the button labels
-    }
+            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
     else:
         # Reset the button color to the default when it is clicked an even number of times
         return {
-        'backgroundColor': 'rgba(0,0,0,0.3)',
-        'color': 'white',
-        'text-align': 'center',
-        'margin-right': '10px',  # add a right margin to create a space between the buttons
-        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
-        'height': '60px',  # set the height of the buttons
-        'width': '150px',  # set the width of the buttons
-        'font-size': '16px'  # set the font size of the button labels
-    }
+            'backgroundColor': 'rgba(0,0,0,0.3)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
 
 @app.callback(
     dash.dependencies.Output('button-2', 'style'),
-    [dash.dependencies.Input('button-2', 'n_clicks')]
+    [dash.dependencies.Input('button-2', 'n_clicks'),
+     dash.dependencies.Input('button-1', 'n_clicks')]
 )
-def update_correlationplot_style(n_clicks):
-    if n_clicks is not None and n_clicks % 2 == 1:
+def update_correlationplot_style(n_clicks_2, n_clicks_1):
+
+
+    if n_clicks_1 is not None and n_clicks_1 % 2 == 1:
+        # Reset the button color to the default when button-2 is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_2 is not None and n_clicks_2 % 2 == 1:
         # Change the button color to green when it is clicked an odd number of times
         return {
-        'backgroundColor': 'rgba(0, 255, 0, 0.5)',
-        'color': 'white',
-        'text-align': 'center',
-        'margin-right': '10px',  # add a right margin to create a space between the buttons
-        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
-        'height': '60px',  # set the height of the buttons
-        'width': '150px',  # set the width of the buttons
-        'font-size': '16px'  # set the font size of the button labels
-    }
+            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
     else:
         # Reset the button color to the default when it is clicked an even number of times
         return {
-        'backgroundColor': 'rgba(0,0,0,0.3)',
-        'color': 'white',
-        'text-align': 'center',
-        'margin-right': '10px',  # add a right margin to create a space between the buttons
-        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
-        'height': '60px',  # set the height of the buttons
-        'width': '150px',  # set the width of the buttons
-        'font-size': '16px'  # set the font size of the button labels
-    }
+            'backgroundColor': 'rgba(0,0,0,0.3)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
 
 ###testing
 
@@ -650,28 +677,37 @@ def update_correlationplot_style(n_clicks):
     ],
     [
         dash.dependencies.Input('button-1', 'n_clicks'),
-        #dash.dependencies.Input('button-2', 'n_clicks')
+        dash.dependencies.Input('button-2', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_x_var(button_1_click):
-    if button_1_click is None:
+def toggle_dropdown_visibility_x_var(button_1_click, button_2_click):
+
+    if (button_2_click is None) or (button_2_click % 2 == 0):
+
+        if button_1_click is None:
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+
+        if button_1_click is not None and button_1_click % 2 == 1:
+            # Make the dropdown visible when Button 1 is clicked an odd number of times
+            return [
+                {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+        else:
+            # Make the dropdown invisible and reset the value when either button is clicked an even number of times
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+    else:
         return [
             {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
         ]
 
-    if button_1_click is not None and button_1_click % 2 == 1:
-        # Make the dropdown visible when Button 1 is clicked an odd number of times
-        return [
-            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
-            None
-        ]
-    else:
-        # Make the dropdown invisible and reset the value when either button is clicked an even number of times
-        return [
-            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
-            None
-        ]
 
 @app.callback(
     [
@@ -680,24 +716,32 @@ def toggle_dropdown_visibility_x_var(button_1_click):
     ],
     [
         dash.dependencies.Input('button-1', 'n_clicks'),
-        #dash.dependencies.Input('button-2', 'n_clicks')
+        dash.dependencies.Input('button-2', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_y_var(button_1_click):
-    if button_1_click is None:
-        return [
-            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
-            None
-        ]
+def toggle_dropdown_visibility_y_var(button_1_click, button_2_click):
 
-    if button_1_click is not None and button_1_click % 2 == 1:
-        # Make the dropdown visible when Button 1 is clicked an odd number of times
-        return [
-            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
-            None
-        ]
+    if (button_2_click is None) or (button_2_click % 2 == 0):
+
+        if button_1_click is None:
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+
+        if button_1_click is not None and button_1_click % 2 == 1:
+            # Make the dropdown visible when Button 1 is clicked an odd number of times
+            return [
+                {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+        else:
+            # Make the dropdown invisible and reset the value when either button is clicked an even number of times
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
     else:
-        # Make the dropdown invisible and reset the value when either button is clicked an even number of times
         return [
             {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
@@ -705,59 +749,37 @@ def toggle_dropdown_visibility_y_var(button_1_click):
 
 @app.callback(
     [
-        dash.dependencies.Output('dropdown_corr_x', 'style'),
-        dash.dependencies.Output('dropdown_corr_x', 'value'),
+        dash.dependencies.Output('dropdown_violin', 'style'),
+        dash.dependencies.Output('dropdown_violin', 'value'),
     ],
     [
         dash.dependencies.Input('button-2', 'n_clicks'),
-        #dash.dependencies.Input('button-2', 'n_clicks')
+        dash.dependencies.Input('button-1', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_corr_var_x(button_corr_click):
-    if button_corr_click is None:
-        return [
-            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
-            None
-        ]
+def toggle_dropdown_visibility_corr_var(button_corr_click, button_scatter_click):
 
-    if button_corr_click is not None and button_corr_click % 2 == 1:
-        # Make the dropdown visible when Button 1 is clicked an odd number of times
-        return [
-            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
-            None
-        ]
+    if (button_scatter_click is None) or (button_scatter_click % 2 == 0):
+
+        if button_corr_click is None:
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+
+        if button_corr_click is not None and button_corr_click % 2 == 1:
+            # Make the dropdown visible when Button 1 is clicked an odd number of times
+            return [
+                {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+        else:
+            # Make the dropdown invisible and reset the value when either button is clicked an even number of times
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
     else:
-        # Make the dropdown invisible and reset the value when either button is clicked an even number of times
-        return [
-            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
-            None
-        ]
-
-@app.callback(
-    [
-        dash.dependencies.Output('dropdown_corr_y', 'style'),
-        dash.dependencies.Output('dropdown_corr_y', 'value'),
-    ],
-    [
-        dash.dependencies.Input('button-2', 'n_clicks'),
-        #dash.dependencies.Input('button-2', 'n_clicks')
-    ]
-)
-def toggle_dropdown_visibility_corr_var_y(button_corr_click):
-    if button_corr_click is None:
-        return [
-            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
-            None
-        ]
-
-    if button_corr_click is not None and button_corr_click % 2 == 1:
-        # Make the dropdown visible when Button 1 is clicked an odd number of times
-        return [
-            {'display': 'block', 'color': 'black', 'textAlign': 'center'},
-            None
-        ]
-    else:
-        # Make the dropdown invisible and reset the value when either button is clicked an even number of times
         return [
             {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
@@ -765,35 +787,40 @@ def toggle_dropdown_visibility_corr_var_y(button_corr_click):
 
 @app.callback(
     Output(component_id='scatterplot-div', component_property='style'),
-    [Input('button-1', 'n_clicks')]
+    [Input('button-1', 'n_clicks'), Input('button-2', 'n_clicks')]
 )
-def update_scatterplot_visibility(n_clicks):
+def update_scatterplot_visibility(n_clicks_1, n_clicks_2):
 
-    if n_clicks is None:
-        return {'display': 'none'}
-    if n_clicks % 2 == 0:
-        # Make the dropdown invisible when the button is clicked an even number of times
-        return {'display': 'none'}
+    if (n_clicks_2 is None) or (n_clicks_2 % 2 == 0) :
+        if n_clicks_1 is None:
+            return {'display': 'none'}
+        if n_clicks_1 % 2 == 0:
+            # Make the scatterplot invisible when the button is clicked an even number of times
+            return {'display': 'none'}
+        else:
+            # Make the scatterplot visible when the button is clicked an odd number of times
+            return {'display': 'block'}
     else:
-        # Make the dropdown visible when the button is clicked an odd number of times
-        {'display': 'block'}
-
+        return {'display': 'none'}
 
 @app.callback(
     Output(component_id='corr-plot-div', component_property='style'),
-    [Input('button-2', 'n_clicks')]
+    [Input('button-2', 'n_clicks'), Input('button-1', 'n_clicks')]
 )
-def update_corplot_visibility(n_clicks):
+def update_corplot_visibility(corr_plot_clicks, scatter_plot_clicks):
 
-    if n_clicks is None:
-        return {'display': 'none'}
-    if n_clicks % 2 == 0:
-        # Make the dropdown invisible when the button is clicked an even number of times
-        return {'display': 'none'}
+    if (scatter_plot_clicks is None) or (scatter_plot_clicks % 2 == 0):
+
+        if corr_plot_clicks is None:
+            return {'display': 'none'}
+        if corr_plot_clicks % 2 == 0:
+            # Make the correlation plot invisible when the button is clicked an even number of times
+            return {'display': 'none'}
+        else:
+            # Make the correlation plot visible when the button is clicked an odd number of times
+            return {'display': 'block'}
     else:
-        # Make the dropdown visible when the button is clicked an odd number of times
-        {'display': 'block'}
-
+        return {'display': 'none'}
 
 @app.callback(
     Output('dropdown_x', 'options'),
@@ -822,7 +849,7 @@ def update_y_options(contents, filename):
         return []
 
 @app.callback(
-    Output('dropdown_corr_x', 'options'),
+    Output('dropdown_violin', 'options'),
     [Input('upload-data', 'contents'),
      Input('upload-data', 'filename')])
 def update_corr_options(contents, filename):
@@ -834,18 +861,6 @@ def update_corr_options(contents, filename):
     else:
         return []
 
-@app.callback(
-    Output('dropdown_corr_y', 'options'),
-    [Input('upload-data', 'contents'),
-     Input('upload-data', 'filename')])
-def update_corr_options(contents, filename):
-    if contents:
-        df = parse_data(contents, filename)
-        df = df.set_index(df.columns[0])
-        lst = [{'label': i, 'value': i} for i in df.columns]
-        return lst
-    else:
-        return []
 
 @app.callback(
     Output('warning-message', 'children'),
@@ -898,63 +913,79 @@ def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data, n_clicks):
             figure.add_annotation(x=0.9, y=0.9, text=f'R-squared = {r_squared:.3f}')
 
             return dcc.Graph(id='scatterplot', figure=figure)
-        else:
+        elif x_axis is None and y_axis is None and n_clicks % 2 ==1:
             return html.Div([
                 html.Center(html.H4('Please make sure to select BOTH an X and Y variable to display Scatterplot')),
                 dcc.Loading(type = 'circle', children=[html.Div(id='loading-scatterplot')])
             ])
-    else:
-        return html.Div([
-                html.Center(html.H4('Please make sure Scatter Plot button is active!'))
-            ])
+    #else:
+    #    return html.Div([
+    #            html.Center(html.H4('Please make sure Scatter Plot button is active!'))
+    #        ])
 
 
 @app.callback(
-    Output(component_id='corr-plot', component_property='children'),
-    [Input(component_id='dropdown_corr_x', component_property='value'),
-    Input(component_id='dropdown_corr_y', component_property='value'),
-     Input('intermediate-value', 'data'), Input('button-2', 'n_clicks')
+    Output('corr-plot-div', 'children'),
+    [Input(component_id='dropdown_violin', component_property='value'),
+     Input('intermediate-value', 'data'),
+     Input('button-2', 'n_clicks')
      ]
 )
-def update_corrplot(x_axis, y_axis, jsonified_cleaned_data, n_clicks):
+def update_plots(violin_value, jsonified_cleaned_data, n_clicks):
     if n_clicks is not None:
-        if (jsonified_cleaned_data is not None) and (x_axis is not None) and (y_axis is not None):
+        if (jsonified_cleaned_data is not None) and (violin_value is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
-            # Create histogram trace
-            histogram_trace = go.Histogram(
-                x=df[x_axis],
-                yaxis='y',
-                name=x_axis
-            )
 
             # Create density trace
             density_trace = go.Violin(
-                x=df[x_axis],
-                yaxis='y2',
+                x=df[violin_value],
                 points='all',
-                name=x_axis,
-                box=dict(visible=False)
+                name=violin_value,
+                box=dict(visible=False),
             )
 
-            # Create figure object with two y-axes
-            fig = go.Figure(data=[density_trace])
+            # Create histogram trace
+            histogram_trace = go.Histogram(
+                x=df[violin_value],
+                name=violin_value
+            )
 
-            # Set y-axis properties
+            # Create figure object for the violin plot
+            violin_fig = go.Figure(data=[density_trace])
 
+            # Set layout properties for the violin plot
+            violin_fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',  # set background color to transparent
+                font=dict(color='white'),  # set font color to white
+                xaxis=dict(showgrid=False),  # remove x-axis gridlines
+                yaxis=dict(showgrid=False),  # remove y-axis gridlines
+            )
 
-            return dcc.Graph(id='corr-plot', figure=fig)
+            # Create figure object for the histogram plot
+            hist_fig = go.Figure(data=[histogram_trace])
 
+            # Set layout properties for the histogram plot
+            hist_fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',  # set background color to transparent
+                font=dict(color='white'),  # set font color to white
+                xaxis=dict(showgrid=False),  # remove x-axis gridlines
+                yaxis=dict(showgrid=False),  # remove y-axis gridlines
+            )
 
-
-                #return dcc.Graph(id='corr-plot', figure=fig)
-        else:
+            return [
+                dcc.Graph(id='violin-plot', figure=violin_fig),
+                dcc.Graph(id='hist-plot', figure=hist_fig)
+            ]
+        elif violin_value is None and n_clicks % 2 == 1:
             return html.Div([
                 html.Center(html.H4('Please make sure to select values to display Correlation Plot')),
-                dcc.Loading(type = 'circle', children=[html.Div(id='loading-corrplot')])
+                dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
             ])
-    else:
-        return html.Div([
-                html.Center(html.H4('Please make sure Scatter Plot button is active!'))
+        else:
+            return html.Div([
+                html.Center(html.H4('testing'))
             ])
 
 if __name__ == "__main__":
