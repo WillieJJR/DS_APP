@@ -95,7 +95,7 @@ button1 = html.Button(
     }
 )
 button2 = html.Button(
-    'Correlation Matrix',
+    'Distribution Plot',
     id='button-2',
     style={
         'backgroundColor': 'rgba(0,0,0,0.3)',
@@ -109,7 +109,7 @@ button2 = html.Button(
     }
 )
 button3 = html.Button(
-    'Pearson Correlation',
+    'Feature Importance',
     id='button-3',
     style={
         'backgroundColor': 'rgba(0,0,0,0.3)',
@@ -236,10 +236,15 @@ app.layout = html.Div([
 
                 dbc.Row([button_container]),
                 dbc.Row([dcc.Dropdown(
+                            id='dropdown_featimp',
+                            options=[],
+                            placeholder = 'Please select values for Feature Importance',
+                            style={'display': 'none'}  # initially set the dropdown to be invisible
+                    )], style={'margin': '10px'}),
+                dbc.Row([dcc.Dropdown(
                             id='dropdown_violin',
                             options=[],
-                            multi = False,
-                            placeholder = 'Please select values for Correlation Plot',
+                            placeholder = 'Please select values for Histogram and Distribution Plot',
                             style={'display': 'none'}  # initially set the dropdown to be invisible
                     )], style={'margin': '10px'}),
                 dbc.Row([
@@ -278,6 +283,9 @@ app.layout = html.Div([
                     html.Div(id='violin-plot'),
                     html.Div(id = 'hist-plot')
                 ])),
+                dbc.Row(html.Div(id='featimp-div', children=[
+                    html.Div(id='featimp-plot')
+                ]))
             ])
         ]),
         dbc.Tab(label='Kmeans Predictions', children=[
@@ -568,38 +576,33 @@ def kpi_four(value, contents, filename):
 @app.callback(
     dash.dependencies.Output('button-1', 'n_clicks'),
     dash.dependencies.Output('button-2', 'n_clicks'),
+    dash.dependencies.Output('button-3', 'n_clicks'),
     [dash.dependencies.Input('button-1', 'n_clicks'),
-     dash.dependencies.Input('button-2', 'n_clicks')]
+     dash.dependencies.Input('button-2', 'n_clicks'),
+     dash.dependencies.Input('button-3', 'n_clicks')]
 )
-def reset_button_clicks(n_clicks_1, n_clicks_2):
-    if n_clicks_1 is not None and n_clicks_1 % 2 == 1 and n_clicks_2 is not None and n_clicks_2 % 2 == 1:
-        # Reset the n_clicks of both buttons to 0
-        return 0, 0
+def reset_button_clicks(n_clicks_1, n_clicks_2, n_clicks_3):
+    if ((n_clicks_1 is not None and n_clicks_1 % 2 == 1 and
+         n_clicks_2 is not None and n_clicks_2 % 2 == 1) or
+        (n_clicks_1 is not None and n_clicks_1 % 2 == 1 and
+         n_clicks_3 is not None and n_clicks_3 % 2 == 1) or
+        (n_clicks_2 is not None and n_clicks_2 % 2 == 1 and
+         n_clicks_3 is not None and n_clicks_3 % 2 == 1)):
+        # Reset the n_clicks of all three buttons to 0
+        return 0, 0, 0
     else:
-        # Return the current n_clicks of both buttons
-        return n_clicks_1, n_clicks_2
+        # Return the current n_clicks of all three buttons
+        return n_clicks_1, n_clicks_2, n_clicks_3
 
 @app.callback(
     dash.dependencies.Output('button-1', 'style'),
     [dash.dependencies.Input('button-1', 'n_clicks'),
-     dash.dependencies.Input('button-2', 'n_clicks')]
+     dash.dependencies.Input('button-2', 'n_clicks'),
+     dash.dependencies.Input('button-3', 'n_clicks')]
 )
-def update_scatterplot_button_style(n_clicks_1, n_clicks_2):
-
-    if n_clicks_2 is not None and n_clicks_2 % 2 == 1:
-        # Reset the button color to the default when button-2 is clicked an odd number of times
-        return {
-            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
-            'color': 'white',
-            'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
-            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
-            'height': '60px',  # set the height of the buttons
-            'width': '150px',  # set the width of the buttons
-            'font-size': '16px'  # set the font size of the button labels
-        }
-    elif n_clicks_1 is not None and n_clicks_1 % 2 == 1:
-        # Change the button color to green when it is clicked an odd number of times
+def update_button_styles(n_clicks_1, n_clicks_2, n_clicks_3):
+    if n_clicks_1 is not None and n_clicks_1 % 2 == 1:
+        # Change the style of button-1 to active when it is clicked an odd number of times
         return {
             'backgroundColor': 'rgba(0, 255, 0, 0.5)',
             'color': 'white',
@@ -610,8 +613,32 @@ def update_scatterplot_button_style(n_clicks_1, n_clicks_2):
             'width': '150px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
+    elif n_clicks_2 is not None and n_clicks_2 % 2 == 1:
+        # Change the style of button-1 to inactive when button-2 is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_3 is not None and n_clicks_3 % 2 == 1:
+        # Change the style of button-1 to inactive when button-3 is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
     else:
-        # Reset the button color to the default when it is clicked an even number of times
+        # Reset the style of button-1 to the default when none of the other buttons are clicked an odd number of times
         return {
             'backgroundColor': 'rgba(0,0,0,0.3)',
             'color': 'white',
@@ -623,16 +650,16 @@ def update_scatterplot_button_style(n_clicks_1, n_clicks_2):
             'font-size': '16px'  # set the font size of the button labels
         }
 
+
 @app.callback(
     dash.dependencies.Output('button-2', 'style'),
     [dash.dependencies.Input('button-2', 'n_clicks'),
-     dash.dependencies.Input('button-1', 'n_clicks')]
+     dash.dependencies.Input('button-1', 'n_clicks'),
+     dash.dependencies.Input('button-3', 'n_clicks')]
 )
-def update_correlationplot_style(n_clicks_2, n_clicks_1):
-
-
+def update_correlationplot_style(n_clicks_2, n_clicks_1, n_clicks_3):
     if n_clicks_1 is not None and n_clicks_1 % 2 == 1:
-        # Reset the button color to the default when button-2 is clicked an odd number of times
+        # Reset the style of button-2 to inactive when button-1 is clicked an odd number of times
         return {
             'backgroundColor': 'rgba(211, 211, 211, 0.5)',
             'color': 'white',
@@ -644,7 +671,76 @@ def update_correlationplot_style(n_clicks_2, n_clicks_1):
             'font-size': '16px'  # set the font size of the button labels
         }
     elif n_clicks_2 is not None and n_clicks_2 % 2 == 1:
-        # Change the button color to green when it is clicked an odd number of times
+        # Change the style of button-2 to active when it is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_3 is not None and n_clicks_3 % 2 == 1:
+        # Reset the style of button-2 to inactive when button-3 is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    else:
+        # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0,0,0,0.3)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+
+
+@app.callback(
+    dash.dependencies.Output('button-3', 'style'),
+    [dash.dependencies.Input('button-2', 'n_clicks'),
+     dash.dependencies.Input('button-1', 'n_clicks'),
+     dash.dependencies.Input('button-3', 'n_clicks')]
+)
+def update_featureimp_plot_style(n_clicks_2, n_clicks_1, n_clicks_3):
+    if n_clicks_1 is not None and n_clicks_1 % 2 == 1:
+        # Reset the style of button-2 to inactive when button-1 is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_2 is not None and n_clicks_2 % 2 == 1:
+        # Change the style of button-2 to active when it is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '60px',  # set the height of the buttons
+            'width': '150px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_3 is not None and n_clicks_3 % 2 == 1:
+        # Reset the style of button-2 to inactive when button-3 is clicked an odd number of times
         return {
             'backgroundColor': 'rgba(0, 255, 0, 0.5)',
             'color': 'white',
@@ -656,7 +752,7 @@ def update_correlationplot_style(n_clicks_2, n_clicks_1):
             'font-size': '16px'  # set the font size of the button labels
         }
     else:
-        # Reset the button color to the default when it is clicked an even number of times
+        # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
         return {
             'backgroundColor': 'rgba(0,0,0,0.3)',
             'color': 'white',
@@ -786,6 +882,44 @@ def toggle_dropdown_visibility_corr_var(button_corr_click, button_scatter_click)
         ]
 
 @app.callback(
+    [
+        dash.dependencies.Output('dropdown_featimp', 'style'),
+        dash.dependencies.Output('dropdown_featimp', 'value'),
+    ],
+    [
+        dash.dependencies.Input('button-3', 'n_clicks'),
+        dash.dependencies.Input('button-1', 'n_clicks')
+    ]
+)
+def toggle_dropdown_visibility_featimp_var(button_featimp_click, button_scatter_click):
+
+    if (button_scatter_click is None) or (button_scatter_click % 2 == 0):
+
+        if button_featimp_click is None:
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+
+        if button_featimp_click is not None and button_featimp_click % 2 == 1:
+            # Make the dropdown visible when Button 1 is clicked an odd number of times
+            return [
+                {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+        else:
+            # Make the dropdown invisible and reset the value when either button is clicked an even number of times
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+    else:
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+
+@app.callback(
     Output(component_id='scatterplot-div', component_property='style'),
     [Input('button-1', 'n_clicks'), Input('button-2', 'n_clicks')]
 )
@@ -822,6 +956,8 @@ def update_corplot_visibility(corr_plot_clicks, scatter_plot_clicks):
     else:
         return {'display': 'none'}
 
+######NEED TO ADD LOGIC TO SHOW THE FEATURE IMPORTANCE CHART HERE########
+
 @app.callback(
     Output('dropdown_x', 'options'),
     [Input('upload-data', 'contents'),
@@ -853,6 +989,19 @@ def update_y_options(contents, filename):
     [Input('upload-data', 'contents'),
      Input('upload-data', 'filename')])
 def update_corr_options(contents, filename):
+    if contents:
+        df = parse_data(contents, filename)
+        df = df.set_index(df.columns[0])
+        lst = [{'label': i, 'value': i} for i in df.columns]
+        return lst
+    else:
+        return []
+
+@app.callback(
+    Output('dropdown_featimp', 'options'),
+    [Input('upload-data', 'contents'),
+     Input('upload-data', 'filename')])
+def update_featimp_options(contents, filename):
     if contents:
         df = parse_data(contents, filename)
         df = df.set_index(df.columns[0])
