@@ -151,6 +151,27 @@ button_container = html.Div(
     style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}  # set the display property to flex to arrange the buttons horizontally
 )
 
+button_callout_1 = html.Button(children='Hover here', id='button_callout_1', n_clicks=0, style={
+    'background-color': '#4CAF50',
+    'border': 'none',
+    'color': 'white',
+    'padding': '15px 32px',
+    'text-align': 'center',
+    'text-decoration': 'none',
+    'display': 'inline-block',
+    'font-size': '16px',
+    'margin': '4px 2px',
+    'cursor': 'pointer',
+})
+callout_box = html.Div(children='This is a callout box.', id='callout', style = {
+    'border': '2px solid black',
+    'border-radius': '4px',
+    'padding': '10px',
+    'background-color': '#F3F3F3',
+    'font-size': '16px',
+    'line-height': '24px',
+    'display': 'none',  # initially hidden
+})
 
 
 
@@ -228,6 +249,14 @@ app.layout = html.Div([
                 html.Div(id='output-data-upload'),
                 dcc.Store(id='store')
             ], className="row"),
+            html.Div(children='Note: Files containing over 10,000 records will be sampled with 10,000 records via Random Sampling for all features in the app.', style = {
+                'border': '2px solid red',
+                'border-radius': '4px',
+                'padding': '10px',
+                'backgroundColor': 'rgba(0,0,0,0)',
+                'font-size': '16px',
+                'line-height': '24px',
+                'textAlign': 'center'})
         ]),
         dbc.Tab(label='Feature Exploration', children=[
             #html.H1('Understand Your variables! Please select a technique to better explore your data.', style={'text-align': 'center'}),
@@ -1238,7 +1267,7 @@ def update_featimp_plots(target_value, jsonified_cleaned_data, n_clicks):
 
 
             X = df.drop(columns=[target_value])
-            print(X)
+
             y = df[target_value]
 
 
