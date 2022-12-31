@@ -8,6 +8,11 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 import pandas as pd
 from scipy.stats import linregress
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import LabelEncoder
+from sklearn.impute import SimpleImputer
 from scipy.stats import spearmanr
 import plotly.graph_objects as go
 import plotly.express as px
@@ -442,6 +447,10 @@ def parse_data(contents, filename):
 def update_store_output(contents, filename ):
     if contents:
         df = parse_data(contents, filename)
+        if len(df) > 10000:
+            df = df.sample(n=10000)
+        else:
+            pass
         store = {
             "data": df.to_dict("records"),
             "columns": [{"name": i, "id": i} for i in df.columns],
@@ -959,6 +968,19 @@ def update_corplot_visibility(corr_plot_clicks, scatter_plot_clicks):
 ######NEED TO ADD LOGIC TO SHOW THE FEATURE IMPORTANCE CHART HERE########
 
 @app.callback(
+    Output(component_id='featimp-div', component_property='style'),
+    [Input('button-1', 'n_clicks'), Input('button-2', 'n_clicks'), Input('button-3', 'n_clicks')]
+)
+def update_scatterplot_visibility(n_clicks_1, n_clicks_2, n_clicks_3):
+    if (n_clicks_3 is not None and n_clicks_3 % 2 == 1) and (n_clicks_2 is None or n_clicks_2 % 2 == 0) and (n_clicks_1 is None or n_clicks_1 % 2 == 0):
+        # Make the featimp visible when button 3 is clicked an odd number of times and all other buttons are clicked an even number of times
+        return {'display': 'block'}
+    else:
+        # Make the scatterplot invisible in all other cases
+        return {'display': 'none'}
+
+######NEED TO ADD LOGIC TO SHOW THE FEATURE IMPORTANCE CHART HERE########
+@app.callback(
     Output('dropdown_x', 'options'),
     [Input('upload-data', 'contents'),
      Input('upload-data', 'filename')])
@@ -997,6 +1019,28 @@ def update_corr_options(contents, filename):
     else:
         return []
 
+def impute_and_remove(df):
+    # Calculate the percentage of missing values in each column
+    missing_values_perc = df.isnull().mean()
+
+    # Drop the columns with more than 20% missing values
+    #df = df.drop(columns=missing_values_perc[missing_values_perc > 0.2].index)
+
+    # Iterate over the remaining columns
+    for col in df.columns:
+        # Determine the data type of the column
+        if np.issubdtype(df[col].dtype, np.number):
+            # Continuous column, use SimpleImputer with strategy 'mean'
+            imputer = SimpleImputer(strategy='mean')
+        else:
+            # Categorical column, use SimpleImputer with strategy 'mode'
+            imputer = SimpleImputer(strategy='most_frequent')
+
+        # Impute the missing values in the column using the SimpleImputer object
+        df[col] = imputer.fit_transform(df[[col]])
+
+    return df
+
 @app.callback(
     Output('dropdown_featimp', 'options'),
     [Input('upload-data', 'contents'),
@@ -1004,6 +1048,9 @@ def update_corr_options(contents, filename):
 def update_featimp_options(contents, filename):
     if contents:
         df = parse_data(contents, filename)
+
+        df = impute_and_remove(df)
+
         df = df.set_index(df.columns[0])
         lst = [{'label': i, 'value': i} for i in df.columns]
         return lst
@@ -1080,7 +1127,7 @@ def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data, n_clicks):
      Input('button-2', 'n_clicks')
      ]
 )
-def update_plots(violin_value, jsonified_cleaned_data, n_clicks):
+def update_hist_plots(violin_value, jsonified_cleaned_data, n_clicks):
     if n_clicks is not None:
         if (jsonified_cleaned_data is not None) and (violin_value is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
@@ -1130,6 +1177,108 @@ def update_plots(violin_value, jsonified_cleaned_data, n_clicks):
         elif violin_value is None and n_clicks % 2 == 1:
             return html.Div([
                 html.Center(html.H4('Please make sure to select values to display Correlation Plot')),
+                dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
+            ])
+        else:
+            return html.Div([
+                html.Center(html.H4('testing'))
+            ])
+
+
+@app.callback(
+    Output('featimp-div', 'children'),
+    [Input(component_id='dropdown_featimp', component_property='value'),
+     Input('intermediate-value', 'data'),
+     Input('button-3', 'n_clicks')
+     ]
+)
+def update_featimp_plots(target_value, jsonified_cleaned_data, n_clicks):
+    if n_clicks is not None:
+        if (jsonified_cleaned_data is not None) and (target_value is not None):
+            df = pd.read_json(jsonified_cleaned_data, orient='split')
+
+
+            #encode target variable if needed
+            if df[target_value].dtype == 'object':
+                if df[target_value].nunique() > 5:
+                    return html.Div([
+                html.Center(html.H2('This target variable has a high degree of cardinality. This will not likely derive any meaningful insights.')),
+                dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
+            ])
+                else:
+                    le_encoder = LabelEncoder()
+                    df[target_value] = le_encoder.fit_transform(df[target_value])
+            else:
+                pass
+
+
+            # Get a list of all features, excluding the target variable
+            features = df.columns.drop(target_value)
+
+            # Select all non-numeric features
+            non_numeric_features = df[features].select_dtypes(exclude='number').columns
+
+            # Create an instance of the OneHotEncoder class
+            encoder = OneHotEncoder()
+
+            # Encode or drop the non-numeric features based on the degree of cardinality
+            for feature in non_numeric_features:
+                if df[feature].nunique() < 4:
+                    one_hot = encoder.fit_transform(df[[feature]])
+                    # Generate a list of names for the one-hot encoded columns based on the unique values of the feature
+                    column_names = [f"{feature}_{value}" for value in df[feature].unique()]
+                    one_hot_df = pd.DataFrame(one_hot.toarray(), columns=column_names)
+                    df = pd.concat([df, one_hot_df], axis=1)
+                    df = df.drop(columns=[feature])
+                else:
+                    df = df.drop(columns=[feature])
+
+
+            df = impute_and_remove(df)
+
+
+            X = df.drop(columns=[target_value])
+            print(X)
+            y = df[target_value]
+
+
+            n_unique_values = y.nunique()
+
+            if n_unique_values > 2:
+                # Use RandomForestRegressor
+                model = RandomForestRegressor()
+
+            else:
+                # Use RandomForestClassifier
+                model = RandomForestClassifier()
+
+
+            model.fit(X, y)
+
+            importance = model.feature_importances_
+
+            feature_importance = pd.DataFrame({'feature': X.columns, 'importance': importance})
+
+            # Sort the dataframe by importance
+
+            feature_importance = feature_importance.sort_values(by='importance', ascending=False)
+
+            fig = go.Figure([go.Bar(x=feature_importance['feature'], y=feature_importance['importance'],
+                                    name='Feature Importance')])
+
+            fig.update_layout({
+                'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+                'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+            })
+            fig.update_layout(title_font_color="white",
+                                 font_color="white")
+
+            return [
+                dcc.Graph(id='featimp-plot', figure=fig)
+            ]
+        elif target_value is None and n_clicks % 2 == 1:
+            return html.Div([
+                html.Center(html.H4('Please make sure to select values to display Feature Importance Plot')),
                 dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
             ])
         else:
