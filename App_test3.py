@@ -145,11 +145,71 @@ button_reset = html.Button(
     }
 )
 
-# Use the html.Div component to create a container for the buttons
+button_regression = html.Button(
+    'Regression',
+    id='button-regression',
+    n_clicks=0,
+    n_clicks_timestamp=0,
+    style={
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'white',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+        'height': '60px',  # set the height of the buttons
+        'width': '150px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+)
+
+button_classification = html.Button(
+    'Classification',
+    id='button-classification',
+    n_clicks=0,
+    n_clicks_timestamp=0,
+    style={
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'white',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+        'height': '60px',  # set the height of the buttons
+        'width': '150px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+)
+
+button_placeholder = html.Button(
+    'Placeholder',
+    id='button-placeholder',
+    n_clicks=0,
+    n_clicks_timestamp=0,
+    style={
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'white',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+        'height': '60px',  # set the height of the buttons
+        'width': '150px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+)
+
+
+# Use the html.Div component to create a container for the Feature Exploration buttons
 button_container = html.Div(
     children=[button1, button2, button3],
     style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}  # set the display property to flex to arrange the buttons horizontally
 )
+
+# Use the html.Div component to create a container for the Kmeans buttons
+button_predictive_analytics_container = html.Div(
+    children=[button_regression, button_classification, button_placeholder],
+    style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}  # set the display property to flex to arrange the buttons horizontally
+)
+
+
 
 button_callout_1 = html.Button(children='Hover here', id='button_callout_1', n_clicks=0, style={
     'background-color': '#4CAF50',
@@ -249,7 +309,7 @@ app.layout = html.Div([
                 html.Div(id='output-data-upload'),
                 dcc.Store(id='store')
             ], className="row"),
-            html.Div(children='Note: Files containing over 10,000 records will be sampled with 10,000 records via Random Sampling for all features in the app.', style = {
+            html.Div(children='Note: Files containing over 10,000 records will be truncated to 10,000 records via Random Sampling for all features in the app.', style = {
                 'border': '2px solid red',
                 'border-radius': '4px',
                 'padding': '10px',
@@ -264,7 +324,7 @@ app.layout = html.Div([
             html.Div([
                 html.Div([
                     html.Center(
-                        html.H1('Understand Your variables! Please select a technique to better explore your data.')
+                        html.H2('Understand Your variables! Please select a technique to better explore your data.')
                     )
                 ], className="row"),
 
@@ -272,7 +332,7 @@ app.layout = html.Div([
                 dbc.Row([dcc.Dropdown(
                             id='dropdown_featimp',
                             options=[],
-                            placeholder = 'Please select values for Feature Importance',
+                            placeholder = 'Please select target variable for Feature Importance',
                             style={'display': 'none'}  # initially set the dropdown to be invisible
                     )], style={'margin': '10px'}),
                 dbc.Row([dcc.Dropdown(
@@ -308,12 +368,10 @@ app.layout = html.Div([
                         )
                 ], style={'margin': '10px'}),
                 dbc.Row(html.Div(id='warning-message', style={'color': 'red', 'fontSize': 20, 'text-align': 'center'})),
-                #dbc.Row(html.Div(id = 'scatterplot-div', children = dcc.Graph(id='scatter-plot')))
-                #dbc.Row(html.Div(id = 'scatterplot-div', children = dcc.Loading(id="loading-2", children = [dcc.Graph(id='scatter-plot')], type = 'circle')))
                 dbc.Row(html.Div(id='scatterplot-div', children=[
                     html.Div(id='scatter-plot')
                 ])),
-                dbc.Row(html.Div(id='corr-plot-div', children=[
+                dbc.Row(html.Div(id='dist-plot-div', children=[
                     html.Div(id='violin-plot'),
                     html.Div(id = 'hist-plot')
                 ])),
@@ -322,37 +380,18 @@ app.layout = html.Div([
                 ]))
             ])
         ]),
-        dbc.Tab(label='Kmeans Predictions', children=[
-            html.H1('Kmeans Market Segmentation', style={'text-align': 'center'}),
-            html.H3('''Kmeans Output Table''', style={'text-align': 'left'}),
-            html.Br(),
-            html.H5('''Please select the amount of clusters you would like to segment your data by:''',
-                    style={'text-align': 'left'}),
-            dcc.Dropdown(id='n-cluster',
-                         options=[
-                             {'label': '1', 'value': 1},
-                             {'label': '2', 'value': 2},
-                             {'label': '3', 'value': 3},
-                             {'label': '4', 'value': 4},
-                             {'label': '5', 'value': 5},
-                             {'label': '6', 'value': 6},
-                             {'label': '7', 'value': 7},
-                             {'label': '8', 'value': 8},
-                             {'label': '9', 'value': 9},
-                             {'label': '10', 'value': 10}
-                         ],
-                         value=3
-                         ),
-            html.Br(),
-            html.Div(id='n-cluster-container', children=[]),
-            html.Br(),
-            html.H3('''Kmeans Centroids Plot ''', style={'text-align': 'left'}),
-            dcc.Graph(id='centroid-container', figure={}),
-            html.Br(),
+        dbc.Tab(label='Predictive Analytics', children=[
+            html.Div([
+                html.Div([
+                    html.Center(
+                        html.H2('Transform Your Data into Insights and Predictions!')
+                    )
+                ], className="row"),
 
-            html.Div(id='kmeans-table'),
-            # Hidden div inside the app that stores the intermediate value
-            # html.Div(id='intermediate-value', style={'display': 'none'})
+                dbc.Row([button_predictive_analytics_container]),
+                ])
+
+
         ])
     ], id="tabs",
         active_tab="tab-0",
@@ -609,7 +648,7 @@ def kpi_four(value, contents, filename):
         return f'''{no_contents}'''
 
 
-###testing
+#######Button resets for Feature Exploration#########
 
 @app.callback(
     dash.dependencies.Output('button-1', 'n_clicks'),
@@ -632,6 +671,32 @@ def reset_button_clicks(n_clicks_1, n_clicks_2, n_clicks_3):
         # Return the current n_clicks of all three buttons
         return n_clicks_1, n_clicks_2, n_clicks_3
 
+
+#######Button resets for Predictive Analytics#########
+
+@app.callback(
+    dash.dependencies.Output('button-regression', 'n_clicks'),
+    dash.dependencies.Output('button-classification', 'n_clicks'),
+    dash.dependencies.Output('button-placeholder', 'n_clicks'),
+    [dash.dependencies.Input('button-regression', 'n_clicks'),
+     dash.dependencies.Input('button-classification', 'n_clicks'),
+     dash.dependencies.Input('button-placeholder', 'n_clicks')]
+)
+def reset_button_clicks_kmeans(n_clicks_regression, n_clicks_classification, n_clicks_placeholder):
+    if ((n_clicks_regression is not None and n_clicks_regression % 2 == 1 and
+         n_clicks_classification is not None and n_clicks_classification % 2 == 1) or
+        (n_clicks_regression is not None and n_clicks_regression % 2 == 1 and
+         n_clicks_placeholder is not None and n_clicks_placeholder % 2 == 1) or
+        (n_clicks_classification is not None and n_clicks_classification % 2 == 1 and
+         n_clicks_placeholder is not None and n_clicks_placeholder % 2 == 1)):
+        # Reset the n_clicks of all three buttons to 0
+        return 0, 0, 0
+    else:
+        # Return the current n_clicks of all three buttons
+        return n_clicks_regression, n_clicks_classification, n_clicks_placeholder
+
+
+#########Dynamic button actions for Feature Exploration tab (Scatterplot - Button 1, Distribution Plot - Button 2, Feature Importance plot - Button 3)##########
 @app.callback(
     dash.dependencies.Output('button-1', 'style'),
     [dash.dependencies.Input('button-1', 'n_clicks'),
@@ -802,8 +867,9 @@ def update_featureimp_plot_style(n_clicks_2, n_clicks_1, n_clicks_3):
             'font-size': '16px'  # set the font size of the button labels
         }
 
-###testing
+##########Dynamic Dropdowns for Feature Exploration Tab############
 
+#### Scatterplot dropdowns
 @app.callback(
     [
         dash.dependencies.Output('dropdown_x', 'style'),
@@ -881,6 +947,8 @@ def toggle_dropdown_visibility_y_var(button_1_click, button_2_click):
             None
         ]
 
+
+#### Distribution Plot Dropdown
 @app.callback(
     [
         dash.dependencies.Output('dropdown_violin', 'style'),
@@ -919,6 +987,8 @@ def toggle_dropdown_visibility_corr_var(button_corr_click, button_scatter_click)
             None
         ]
 
+
+#### Feature Importance plot dropdown
 @app.callback(
     [
         dash.dependencies.Output('dropdown_featimp', 'style'),
@@ -957,6 +1027,10 @@ def toggle_dropdown_visibility_featimp_var(button_featimp_click, button_scatter_
             None
         ]
 
+
+##########Dynamic Charts for Feature Exploration Tab############
+
+#### Scatterlplot Div behavior
 @app.callback(
     Output(component_id='scatterplot-div', component_property='style'),
     [Input('button-1', 'n_clicks'), Input('button-2', 'n_clicks')]
@@ -975,8 +1049,10 @@ def update_scatterplot_visibility(n_clicks_1, n_clicks_2):
     else:
         return {'display': 'none'}
 
+
+#### Distribution plot Div behavior
 @app.callback(
-    Output(component_id='corr-plot-div', component_property='style'),
+    Output(component_id='dist-plot-div', component_property='style'),
     [Input('button-2', 'n_clicks'), Input('button-1', 'n_clicks')]
 )
 def update_corplot_visibility(corr_plot_clicks, scatter_plot_clicks):
@@ -994,7 +1070,7 @@ def update_corplot_visibility(corr_plot_clicks, scatter_plot_clicks):
     else:
         return {'display': 'none'}
 
-######NEED TO ADD LOGIC TO SHOW THE FEATURE IMPORTANCE CHART HERE########
+#### Feature Importance Plot Div behavior
 
 @app.callback(
     Output(component_id='featimp-div', component_property='style'),
@@ -1008,7 +1084,10 @@ def update_scatterplot_visibility(n_clicks_1, n_clicks_2, n_clicks_3):
         # Make the scatterplot invisible in all other cases
         return {'display': 'none'}
 
-######NEED TO ADD LOGIC TO SHOW THE FEATURE IMPORTANCE CHART HERE########
+
+########Dropdowns for Feature Exploration
+
+#### Dropdowns for Scatterplot
 @app.callback(
     Output('dropdown_x', 'options'),
     [Input('upload-data', 'contents'),
@@ -1035,6 +1114,8 @@ def update_y_options(contents, filename):
     else:
         return []
 
+
+#### Dropdowns for Distribution Plots
 @app.callback(
     Output('dropdown_violin', 'options'),
     [Input('upload-data', 'contents'),
@@ -1048,6 +1129,8 @@ def update_corr_options(contents, filename):
     else:
         return []
 
+
+#### Function to impute Null values for Random Forest Feature Importance
 def impute_and_remove(df):
     # Calculate the percentage of missing values in each column
     missing_values_perc = df.isnull().mean()
@@ -1070,6 +1153,8 @@ def impute_and_remove(df):
 
     return df
 
+
+#### Dropdown for Feature Importance plot
 @app.callback(
     Output('dropdown_featimp', 'options'),
     [Input('upload-data', 'contents'),
@@ -1086,7 +1171,7 @@ def update_featimp_options(contents, filename):
     else:
         return []
 
-
+#######Warning Messages########
 @app.callback(
     Output('warning-message', 'children'),
     [Input('dropdown_x', 'value'), Input('dropdown_y', 'value')]
@@ -1100,6 +1185,8 @@ def update_warning_message(dropdown_x_value, dropdown_y_value):
     else:
         return ''
 
+
+########Callbacks for all features in the App#########
 @app.callback(
     Output(component_id='scatter-plot', component_property='children'),
     [Input(component_id='dropdown_x', component_property='value'),
@@ -1150,7 +1237,7 @@ def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data, n_clicks):
 
 
 @app.callback(
-    Output('corr-plot-div', 'children'),
+    Output('dist-plot-div', 'children'),
     [Input(component_id='dropdown_violin', component_property='value'),
      Input('intermediate-value', 'data'),
      Input('button-2', 'n_clicks')
