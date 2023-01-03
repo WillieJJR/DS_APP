@@ -1505,7 +1505,7 @@ def update_featimp_options(contents, filename):
         return []
 
 
-########Dropdowns for Feature Exploration
+########Dropdowns for Predictive Analytics
 
 #### Dropdowns for Scatterplot
 @app.callback(
@@ -1792,7 +1792,7 @@ def update_regression_graph(n_clicks, jsonified_cleaned_data, feature_columns, t
     if n_clicks is not None:
         if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
-            print('read in df')
+            #print('read in df')
 
             # encode target variable if needed
             if df[target_column].dtype == 'object':
@@ -1867,7 +1867,7 @@ def update_regression_graph(n_clicks, jsonified_cleaned_data, feature_columns, t
             table = dash_table.DataTable(
                 id="table",
                 columns=[{"name": col, "id": col} for col in results.columns],
-                data=results.to_dict("rows"),
+                data=results.to_dict("records"),
                 style_header={'backgroundColor': 'rgba(0,0,0,0)',
                               'color': 'white',
                               'fontWeight': 'bold',
