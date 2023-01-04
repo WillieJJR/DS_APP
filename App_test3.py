@@ -199,6 +199,40 @@ button_placeholder = html.Button(
     }
 )
 
+button_linear = html.Button(
+    'Linear',
+    id='button_linear',
+    n_clicks=0,
+    n_clicks_timestamp=0,
+    style={
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'white',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+        'height': '30px',  # set the height of the buttons
+        'width': '120px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+)
+
+button_nonlinear = html.Button(
+    'Non Linear',
+    id='button_nonlinear',
+    n_clicks=0,
+    n_clicks_timestamp=0,
+    style={
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'white',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+        'height': '30px',  # set the height of the buttons
+        'width': '120px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+)
+
 
 # Use the html.Div component to create a container for the Feature Exploration buttons
 button_container = html.Div(
@@ -208,9 +242,11 @@ button_container = html.Div(
 
 # Use the html.Div component to create a container for the Kmeans buttons
 button_predictive_analytics_container = html.Div(
-    children=[button_regression, button_classification, button_placeholder],
-    style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}  # set the display property to flex to arrange the buttons horizontally
+    children=[button_regression, button_classification, button_placeholder,
+              html.Div([button_linear, html.Br(), button_nonlinear], style={"display": "block"})],
+    style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}
 )
+
 
 
 
@@ -235,7 +271,6 @@ callout_box = html.Div(children='This is a callout box.', id='callout', style = 
     'line-height': '24px',
     'display': 'none',  # initially hidden
 })
-
 
 
 app.layout = html.Div([
@@ -747,6 +782,22 @@ def reset_button_clicks_kmeans(n_clicks_regression, n_clicks_classification, n_c
         return n_clicks_regression, n_clicks_classification, n_clicks_placeholder
 
 
+#######Button resets for Predictive Analytics - Linearity#########
+
+@app.callback(
+    [Output('button_linear', 'n_clicks'), Output('button_nonlinear', 'n_clicks')],
+    [Input('button_linear', 'n_clicks'), Input('button_nonlinear', 'n_clicks')]
+)
+def reset_button_clicks_linear_nonlinear(n_clicks_linear, n_clicks_nonlinear):
+    if (n_clicks_linear is not None and n_clicks_linear % 2 == 1 and
+        n_clicks_nonlinear is not None and n_clicks_nonlinear % 2 == 1):
+        # Reset the n_clicks of both buttons to 0
+        return 0, 0
+    else:
+        # Return the current n_clicks of both buttons
+        return n_clicks_linear, n_clicks_nonlinear
+
+
 #########Dynamic button actions for Feature Exploration tab (Scatterplot - Button 1, Distribution Plot - Button 2, Feature Importance plot - Button 3)##########
 @app.callback(
     dash.dependencies.Output('button-1', 'style'),
@@ -1042,7 +1093,7 @@ def update_classification_style(n_clicks_classification, n_clicks_regression, n_
      dash.dependencies.Input('button-regression', 'n_clicks'),
      dash.dependencies.Input('button-placeholder', 'n_clicks')]
 )
-def update_featureimp_plot_style(n_clicks_classification, n_clicks_regression, n_clicks_placeholder):
+def update_placeholder_plot_style(n_clicks_classification, n_clicks_regression, n_clicks_placeholder):
     if n_clicks_regression is not None and n_clicks_regression % 2 == 1:
         # Reset the style of button-2 to inactive when button-1 is clicked an odd number of times
         return {
@@ -1092,6 +1143,91 @@ def update_featureimp_plot_style(n_clicks_classification, n_clicks_regression, n
             'font-size': '16px'  # set the font size of the button labels
         }
 
+
+
+#########Dynamic button actions for Linearity (Regression - Button 1, Classification - Button 2, Placeholder - Button 3)##########
+@app.callback(
+    Output('button_linear', 'style'),
+    [Input('button_linear', 'n_clicks'), Input('button_nonlinear', 'n_clicks')]
+)
+def update_button_style_linear(n_clicks_linear, n_clicks_nonlinear):
+    if n_clicks_nonlinear is not None and n_clicks_nonlinear % 2 == 1:
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '120px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_linear is not None and n_clicks_linear % 2 == 1:
+        # Change the style of button-2 to active when it is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '120px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    else:
+        # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0,0,0,0.3)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '120px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+
+
+@app.callback(
+    Output('button_nonlinear', 'style'),
+    [Input('button_linear', 'n_clicks'), Input('button_nonlinear', 'n_clicks')]
+)
+def update_button_style_nonlinear(n_clicks_linear, n_clicks_nonlinear):
+    if n_clicks_linear is not None and n_clicks_linear % 2 == 1:
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '120px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_nonlinear is not None and n_clicks_nonlinear % 2 == 1:
+        # Change the style of button-2 to active when it is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '120px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    else:
+        # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0,0,0,0.3)',
+            'color': 'white',
+            'text-align': 'center',
+            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '120px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
 
 
 ##########Dynamic Dropdowns for Feature Exploration Tab############
@@ -1784,21 +1920,22 @@ def update_featimp_plots(target_value, jsonified_cleaned_data, n_clicks):
 @app.callback(
     Output("regression-div", "children"),
     [Input("button-regression", "n_clicks"),
+     Input("button_linear", "n_clicks"),
+     Input("button_nonlinear", "n_clicks"),
      Input('intermediate-value', 'data')],
     [Input("dropdown_x_regression", "value"),
      Input("dropdown_y_regression", "value")]
 )
-def update_regression_graph(n_clicks, jsonified_cleaned_data, feature_columns, target_column):
-    if n_clicks is not None:
+def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_nonlinear, jsonified_cleaned_data, feature_columns, target_column):
+    if n_clicks_regress is not None and n_clicks_linear % 2 == 1:
         if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
-            #print('read in df')
 
             # encode target variable if needed
             if df[target_column].dtype == 'object':
                 return html.Div([
                     html.Center(html.H2(
-                        'This target variable is labeled as a Categorical Variable and therefore not appropriate to use for Regression.')),
+                        'This target variable is NOT a continuous variable and therefore not appropriate to use for Regression.')),
                     #dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
                 ])
             else:
@@ -1901,6 +2038,122 @@ def update_regression_graph(n_clicks, jsonified_cleaned_data, feature_columns, t
 
 
             return dcc.Graph(id='regression-plot', figure=fig), f"R2 Score: {score}", table
+
+    elif n_clicks_regress is not None and n_clicks_nonlinear % 2 == 1:
+        if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
+            df = pd.read_json(jsonified_cleaned_data, orient='split')
+
+
+
+            # encode target variable if needed
+            if df[target_column].dtype == 'object':
+                return html.Div([
+                    html.Center(html.H2(
+                        'This target variable is labeled as a Categorical Variable and therefore not appropriate to use for Regression.')),
+                    # dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
+                ])
+            else:
+                pass
+
+            non_numeric_features = df[feature_columns].select_dtypes(exclude='number').columns
+
+            # Create an instance of the OneHotEncoder class
+            encoder = OneHotEncoder()
+
+            # Encode or drop the non-numeric features based on the degree of cardinality - if a categorical feature has more than 4 unique classes then drop the variable as it may add too many dimensions
+            for feature in non_numeric_features:
+                if df[feature].nunique() < 4:
+                    one_hot = encoder.fit_transform(df[[feature]])
+                    # Generate a list of names for the one-hot encoded columns based on the unique values of the feature
+                    column_names = [f"{feature}_{value}" for value in df[feature].unique()]
+                    one_hot_df = pd.DataFrame(one_hot.toarray(), columns=column_names)
+                    df = pd.concat([df, one_hot_df], axis=1)
+                    df = df.drop(columns=[feature])
+                else:
+                    df = df.drop(columns=[feature])
+
+            # if not feature_columns:
+            #    return "Please select features"
+            # if not target_column:
+            #    return "Please select a target"
+
+            # preprocessing step 1 - impute missing values
+            df = impute_and_remove(df)
+
+            df = standardize_inputs(df, target_column)
+
+            X = df[feature_columns]
+            y = df[target_column]
+            X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=10)
+
+            model = RandomForestRegressor()
+
+            model.fit(X_train, y_train)
+
+            predictions = model.predict(X_test)
+
+            score = model.score(X_test, y_test)
+            predictions = model.predict(X_test)
+            fig = px.scatter(x=y_test, y=predictions)
+            fig.add_scatter(x=y_test, y=y_test, mode="lines", name="Line of Best Fit")
+            fig.update_layout(title="Actual vs Predicted (Random Forest)")
+            fig.update_traces(marker=dict(color='red'))
+            fig.update_xaxes(showgrid=False)
+            fig.update_yaxes(showgrid=False)
+            fig.update_layout({
+                'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+                'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+            })
+            fig.update_layout(
+                title={
+                    'y': 0.9,
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top'})
+            fig.update_layout(title_font_color="white",
+                              font_color="white")
+            fig.update_layout(xaxis={"title": "Actual"}, yaxis={"title": "Predicted"})
+
+            results = pd.DataFrame({
+                "Actual": y_test,
+                "Predicted": predictions
+            })
+            table = dash_table.DataTable(
+                id="table",
+                columns=[{"name": col, "id": col} for col in results.columns],
+                data=results.to_dict("records"),
+                style_header={'backgroundColor': 'rgba(0,0,0,0)',
+                              'color': 'white',
+                              'fontWeight': 'bold',
+                              'textAlign': 'center', },
+                style_table={'overflowX': 'scroll'},
+                style_cell={'minWidth': '180px', 'width': '180px',
+                            'maxWidth': '180px', 'whiteSpace': 'normal',
+                            'backgroundColor': 'rgba(0,0,0,0)',
+                            'color': 'white'},
+                style_data_conditional=[
+                    {
+                        # Set the font color for all cells to black
+                        'if': {'column_id': 'all'},
+                        'color': 'white'
+                    },
+                    {
+                        # Set the font color for cells in the 'Name' column to white
+                        # when the row is highlighted
+                        'if': {'column_id': 'Name', 'row_index': 'odd'},
+                        'color': 'black'
+                    }
+                ],
+                editable=False,
+                page_size=5,
+                sort_mode='multi',
+                sort_action='native',
+                filter_action='native',
+            )
+
+            return dcc.Graph(id='regression-plot', figure=fig), f"R2 Score: {score}", table
+
+
 
 
 if __name__ == "__main__":

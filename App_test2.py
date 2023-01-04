@@ -454,11 +454,43 @@ app.layout = html.Div([
                         )
                 ], style={'margin': '10px'}),
 
+                dbc.Row([
+                    dbc.Col(
+                        dcc.Dropdown(
+                            id='dropdown_x_class',
+                            options=[],
+                            placeholder = 'Please select input features ',
+                            multi = True,
+                            style={'display': 'none',
+                                   'color': 'black',
+                                    'textAlign': 'center',
+                                   # 'backgroundColor': 'rgba(0,0,0,0)',
+                                   'width': '400px',
+                                   'margin': '0 auto',
+                                   '.css-1wa3eu0-placeholder': {'color': 'red'}
+                                   }  # initially set the dropdown to be invisible
+                        )
+                    ),
+                    dbc.Col(
+                        dcc.Dropdown(
+                            id='dropdown_y_class',
+                            options=[],
+                            placeholder = 'Please select a Target variable ',
+                            style={'display': 'none'}  # initially set the dropdown to be invisible
+                        )
+                        )
+                ], style={'margin': '10px'}),
+
                 dbc.Row(html.Div(id='warning-message-regression', style={'color': 'red', 'fontSize': 20, 'text-align': 'center'})),
                 dbc.Row(html.Div(id='regression-div', children=[
                     html.Div(id='regression-plot'),
                     html.Div(id="regression-results", style={"display": "none"}),
                     html.Div(id = "regression-tbl", style={"display": "none"})
+                ])),
+                dbc.Row(html.Div(id='classification-div', children=[
+                    html.Div(id='classification-plot'),
+                    html.Div(id="classification-results", style={"display": "none"}),
+                    html.Div(id = "classification-tbl", style={"display": "none"})
                 ]))
 
                 ])
@@ -1472,6 +1504,85 @@ def toggle_dropdown_visibility_y_var_regression(button_regression_click, button_
         ]
 
 
+
+@app.callback(
+    [
+        dash.dependencies.Output('dropdown_x_class', 'style'),
+        dash.dependencies.Output('dropdown_x_class', 'value'),
+    ],
+    [
+        dash.dependencies.Input('button-regression', 'n_clicks'),
+        dash.dependencies.Input('button-classification', 'n_clicks')
+    ]
+)
+def toggle_dropdown_visibility_x_var_classification(button_regression_click, button_classification_click):
+
+    if (button_regression_click is None) or (button_regression_click % 2 == 0):
+
+        if button_classification_click is None:
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+
+        if button_classification_click is not None and button_classification_click % 2 == 1:
+            # Make the dropdown visible when Button 1 is clicked an odd number of times
+            return [
+                {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+        else:
+            # Make the dropdown invisible and reset the value when either button is clicked an even number of times
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+    else:
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+
+
+@app.callback(
+    [
+        dash.dependencies.Output('dropdown_y_class', 'style'),
+        dash.dependencies.Output('dropdown_y_class', 'value'),
+    ],
+    [
+        dash.dependencies.Input('button-regression', 'n_clicks'),
+        dash.dependencies.Input('button-classification', 'n_clicks')
+    ]
+)
+def toggle_dropdown_visibility_y_var_classification(button_regression_click, button_classification_click):
+
+    if (button_regression_click is None) or (button_regression_click % 2 == 0):
+
+        if button_classification_click is None:
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+
+        if button_classification_click is not None and button_classification_click % 2 == 1:
+            # Make the dropdown visible when Button 1 is clicked an odd number of times
+            return [
+                {'display': 'block', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+        else:
+            # Make the dropdown invisible and reset the value when either button is clicked an even number of times
+            return [
+                {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+                None
+            ]
+    else:
+        return [
+            {'display': 'none', 'color': 'black', 'textAlign': 'center'},
+            None
+        ]
+
+
 ##########Dynamic Charts for Feature Exploration Tab############
 
 #### Scatterlplot Div behavior
@@ -1544,6 +1655,24 @@ def update_regression_visibility(n_clicks_regression, n_clicks_classification):
         if n_clicks_regression is None:
             return {'display': 'none'}
         if n_clicks_regression % 2 == 0:
+            # Make the scatterplot invisible when the button is clicked an even number of times
+            return {'display': 'none'}
+        else:
+            # Make the scatterplot visible when the button is clicked an odd number of times
+            return {'display': 'block'}
+    else:
+        return {'display': 'none'}
+
+@app.callback(
+    Output(component_id='classification-div', component_property='style'),
+    [Input('button-regression', 'n_clicks'), Input('button-classification', 'n_clicks')]
+)
+def update_classification_visibility(n_clicks_regression, n_clicks_classification):
+
+    if (n_clicks_regression is None) or (n_clicks_regression % 2 == 0):
+        if n_clicks_classification is None:
+            return {'display': 'none'}
+        if n_clicks_classification % 2 == 0:
             # Make the scatterplot invisible when the button is clicked an even number of times
             return {'display': 'none'}
         else:
@@ -1648,7 +1777,7 @@ def update_featimp_options(contents, filename):
     Output('dropdown_x_regression', 'options'),
     [Input('upload-data', 'contents'),
      Input('upload-data', 'filename')])
-def update_x_options(contents, filename):
+def update_x_regress_options(contents, filename):
     if contents:
         df = parse_data(contents, filename)
         df = df.set_index(df.columns[0])
@@ -1661,7 +1790,7 @@ def update_x_options(contents, filename):
     Output('dropdown_y_regression', 'options'),
     [Input('upload-data', 'contents'),
      Input('upload-data', 'filename')])
-def update_y_options(contents, filename):
+def update_y_regress_options(contents, filename):
     if contents:
         df = parse_data(contents, filename)
         df = df.set_index(df.columns[0])
@@ -1670,6 +1799,38 @@ def update_y_options(contents, filename):
     else:
         return []
 
+
+@app.callback(
+    Output('dropdown_x_class', 'options'),
+    [Input('upload-data', 'contents'),
+     Input('upload-data', 'filename')])
+def update_x_class_options(contents, filename):
+    if contents:
+        df = parse_data(contents, filename)
+
+        df = impute_and_remove(df)
+
+        df = df.set_index(df.columns[0])
+        lst = [{'label': i, 'value': i} for i in df.columns]
+        return lst
+    else:
+        return []
+
+@app.callback(
+    Output('dropdown_y_class', 'options'),
+    [Input('upload-data', 'contents'),
+     Input('upload-data', 'filename')])
+def update_x_class_options(contents, filename):
+    if contents:
+        df = parse_data(contents, filename)
+
+        df = impute_and_remove(df)
+
+        df = df.set_index(df.columns[0])
+        lst = [{'label': i, 'value': i} for i in df.columns]
+        return lst
+    else:
+        return []
 
 #######Warning Messages########
 @app.callback(
@@ -1930,13 +2091,12 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_nonlinea
     if n_clicks_regress is not None and n_clicks_linear % 2 == 1:
         if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
-            #print('read in df')
 
             # encode target variable if needed
             if df[target_column].dtype == 'object':
                 return html.Div([
                     html.Center(html.H2(
-                        'This target variable is labeled as a Categorical Variable and therefore not appropriate to use for Regression.')),
+                        'This target variable is NOT a continuous variable and therefore not appropriate to use for Regression.')),
                     #dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
                 ])
             else:
@@ -2154,7 +2314,7 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_nonlinea
 
             return dcc.Graph(id='regression-plot', figure=fig), f"R2 Score: {score}", table
 
-
+####NEED TO CREATE OUTPUTS FOR CLASSIFICATION MODELS
 
 
 if __name__ == "__main__":
