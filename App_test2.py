@@ -10,6 +10,7 @@ import pandas as pd
 from scipy.stats import linregress
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import LabelEncoder
 from sklearn.impute import SimpleImputer
@@ -488,9 +489,9 @@ app.layout = html.Div([
                     html.Div(id = "regression-tbl", style={"display": "none"})
                 ])),
                 dbc.Row(html.Div(id='classification-div', children=[
-                    html.Div(id='classification-plot'),
-                    html.Div(id="classification-results", style={"display": "none"}),
-                    html.Div(id = "classification-tbl", style={"display": "none"})
+                    html.Div(id='classification-plot')
+                    #html.Div(id="classification-results", style={"display": "none"}),
+                    #html.Div(id = "classification-tbl", style={"display": "none"})
                 ]))
 
                 ])
@@ -582,6 +583,17 @@ def standardize_inputs(df, target_column):
 
     return df_scaled
 
+
+def standardize_inputs_class(df, target_column):
+    # Make a copy of the DataFrame
+    df_scaled = df.copy()
+
+    # Standardize the numeric columns
+    scaler = StandardScaler()
+    numeric_columns = df_scaled.select_dtypes(include=["int", "float"]).columns
+    df_scaled[numeric_columns] = scaler.fit_transform(df_scaled[numeric_columns])
+
+    return df_scaled
 
 @app.callback(Output('output-data-upload', 'children'),
               Input('upload-data', 'contents'),
@@ -2316,6 +2328,115 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_nonlinea
 
 ####NEED TO CREATE OUTPUTS FOR CLASSIFICATION MODELS
 
+
+@app.callback(
+    Output("classification-div", "children"),
+    [Input("button-classification", "n_clicks"),
+     Input("button_linear", "n_clicks"),
+     Input("button_nonlinear", "n_clicks"),
+     Input('intermediate-value', 'data')],
+    [Input("dropdown_x_class", "value"),
+     Input("dropdown_y_class", "value")]
+)
+def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlinear, jsonified_cleaned_data, feature_columns, target_column):
+    if n_clicks_class is not None and n_clicks_linear % 2 == 1:
+        if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
+            print("check")
+            df = pd.read_json(jsonified_cleaned_data, orient='split')
+
+            # encode target variable if needed
+            if df[target_column].dtype in ["float", "int", "bool"]:
+                return html.Div([
+                    html.Center(html.H2(
+                        'This target variable is NOT a categorical variable and therefore not appropriate to use for Classification.')),
+                ])
+            else:
+                pass
+
+            non_numeric_features = df[feature_columns].select_dtypes(exclude='number').columns
+
+##come back to this tomorrow - issue is having trouble accessing the encoded variables, and the selected variables minus the initial name of the encoded variables
+
+            # Create an instance of the OneHotEncoder class
+            encoder = OneHotEncoder()
+            print(feature_columns)
+            selected_features = feature_columns
+            new_column_names = []
+            dropped_columns = []
+
+            # Encode or drop the non-numeric features based on the degree of cardinality - if a categorical feature has more than 4 unique classes then drop the variable as it may add too many dimensions
+            for feature in non_numeric_features:
+                if df[feature].nunique() < 4:
+                    #selected_features.append(feature)
+                    one_hot = encoder.fit_transform(df[[feature]])
+                    # Generate a list of names for the one-hot encoded columns based on the unique values of the feature
+                    column_names = [f"{feature}_{value}" for value in df[feature].unique()]
+                    new_column_names.extend(column_names)
+                    dropped_columns.append(feature)
+                    one_hot_df = pd.DataFrame(one_hot.toarray(), columns=column_names)
+                    df = pd.concat([df, one_hot_df], axis=1)
+                    df = df.drop(columns=[feature])
+                else:
+                    df = df.drop(columns=[feature])
+
+            combined_columns = selected_features + new_column_names
+            for column in combined_columns:
+                if column in dropped_columns:
+                    combined_columns.remove(column)
+
+            #X = df[all_features]
+            print(selected_features)
+            #print(new_column_names)
+            #print(dropped_columns)
+            print(combined_columns)
+
+            print("made it after encoding")
+
+            #df = df[feature_columns]
+            #print(df.columns)
+
+
+            #preprocessing step 1 - impute missing values
+            df = impute_and_remove(df)
+            #print("df after imputation". df.columns)
+
+
+            df = standardize_inputs_class(df, target_column)
+
+            print("made it after standardization")
+            #print(df.columns)
+
+
+
+
+            X = df[combined_columns] #this already has the chosen columns just named after the OHE
+            print(X)
+            y = df[target_column]
+            print(y)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=10)
+            #print(X_test)
+            model = LogisticRegression()
+            print("model is running")
+            model.fit(X_train, y_train)
+            print(X_test.iloc[:, 0])
+            print(len(y_test))
+
+
+            predictions = model.predict(X_test)
+            print(predictions)
+
+            # Create a scatter plot of the data, coloring the points by their predicted labels
+            fig = px.scatter(x=X_test.iloc[:, 0], y=X_test.iloc[:, 1], color=predictions)
+
+
+
+
+
+
+            return dcc.Graph(id='classification-plot', figure=fig)
+
+    else:
+        return f'''Need to create non-liner classifier'''
 
 if __name__ == "__main__":
     app.run_server(debug=True)
