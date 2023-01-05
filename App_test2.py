@@ -17,6 +17,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+import sklearn.metrics
+from sklearn.metrics import accuracy_score
 from scipy.stats import spearmanr
 import plotly.graph_objects as go
 import plotly.express as px
@@ -489,9 +491,9 @@ app.layout = html.Div([
                     html.Div(id = "regression-tbl", style={"display": "none"})
                 ])),
                 dbc.Row(html.Div(id='classification-div', children=[
-                    html.Div(id='classification-plot')
-                    #html.Div(id="classification-results", style={"display": "none"}),
-                    #html.Div(id = "classification-tbl", style={"display": "none"})
+                    html.Div(id='classification-plot'),
+                    html.Div(id="classification-results", style={"display": "none"}),
+                    html.Div(id = "classification-tbl", style={"display": "none"})
                 ]))
 
                 ])
@@ -2412,28 +2414,136 @@ def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlin
             X = df[combined_columns] #this already has the chosen columns just named after the OHE
             print(X)
             y = df[target_column]
-            print(y)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=10)
+
+            le = LabelEncoder()
+            y_encoded = le.fit_transform(y)
+            print(y_encoded)
+
+            X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
             #print(X_test)
             model = LogisticRegression()
             print("model is running")
             model.fit(X_train, y_train)
-            print(X_test.iloc[:, 0])
-            print(len(y_test))
+            probs = model.predict_proba(X_test)[:, 1]
+            print(probs)
+            #print(X_test.iloc[:, 0])
+            #print(len(y_test))
 
 
             predictions = model.predict(X_test)
             print(predictions)
 
             # Create a scatter plot of the data, coloring the points by their predicted labels
-            fig = px.scatter(x=X_test.iloc[:, 0], y=X_test.iloc[:, 1], color=predictions)
+            #fig = px.scatter(x=X_test.iloc[:, 0], y=X_test.iloc[:, 1], color=predictions)
+
+            def sigmoid(x):
+                return 1 / (1 + np.exp(-x))
+
+            # Calculate the output of the sigmoid function for each predicted probability
+            output = sigmoid(probs)
+
+            # Create a trace for the sigmoid function
+            #trace = go.Scatter(x=probs, y=output, mode='lines', name='Sigmoid function')
+
+            predictions_unencoded = le.inverse_transform(predictions)
+
+            class_labels = le.classes_
+
+            # Create a trace for the true class labels
+            pred_values = list(set(predictions))
+
+            if len(set(y_encoded)) == 2:
+
+                # Generate a list of colors for each unique value of y
+                colors = ['red', 'blue', 'green', 'yellow', 'black']
+                color_map = {pred_values[i]: colors[i] for i in range(len(pred_values))}
+
+                # Map the colors to the markers in the scatter plot
+                marker_colors = [color_map[pred] for pred in predictions]
+
+                fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_test, probs)
+
+                # Create a trace for the TPR and FPR
+                roc_curve = go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC curve')
+
+                # Create a figure with the ROC curve trace
+                fig = go.Figure(data=[roc_curve])
+
+                # Add a title and axis labels
+                fig.update_layout(title='ROC curve', xaxis_title='False Positive Rate', yaxis_title='True Positive Rate')
+
+                accuracy = accuracy_score(y_test, predictions)
+                print('Accuracy:', accuracy)
+            elif len(set(y_encoded)) > 2:
+
+                # Calculate the confusion matrix
+                confusion_matrix = sklearn.metrics.confusion_matrix(y_test, predictions)
+
+                # Create a list of lists with the confusion matrix values
+                matrix_values = [[str(value) for value in row] for row in confusion_matrix]
+
+                # Create a table trace
+                trace = go.Table(
+                    header=dict(values=class_labels),
+                    cells=dict(values=matrix_values)
+                )
+
+                # Calculate the number of correct and incorrect classifications
+                num_correct = sum([confusion_matrix[i][i] for i in range(len(class_labels))])
+                num_incorrect = sum([sum(row) - row[i] for i, row in enumerate(confusion_matrix)])
+
+                # Create a list of annotations for the labels
+                annotations = [
+                    dict(xref='paper', yref='paper', x=-0.2, y=-0.1, text=f'Correct: {num_correct}', showarrow=False),
+                    dict(xref='paper', yref='paper', x=-0.2, y=-0.2, text=f'Incorrect: {num_incorrect}',
+                         showarrow=False)
+                ]
+
+                # Create a figure with the table trace and annotations
+                fig = go.Figure(data=[trace], layout=go.Layout(annotations=annotations))
+
+                # Customize the appearance of the plot
+                fig.update_layout(title='Confusion Matrix', xaxis_title='Predicted Label', yaxis_title='True Label')
+
+            results = pd.DataFrame({
+                "Actual": y_test,
+                "Predicted": predictions
+            })
+            table = dash_table.DataTable(
+                id="table",
+                columns=[{"name": col, "id": col} for col in results.columns],
+                data=results.to_dict("records"),
+                style_header={'backgroundColor': 'rgba(0,0,0,0)',
+                              'color': 'white',
+                              'fontWeight': 'bold',
+                              'textAlign': 'center', },
+                style_table={'overflowX': 'scroll'},
+                style_cell={'minWidth': '180px', 'width': '180px',
+                            'maxWidth': '180px', 'whiteSpace': 'normal',
+                            'backgroundColor': 'rgba(0,0,0,0)',
+                            'color': 'white'},
+                style_data_conditional=[
+                    {
+                        # Set the font color for all cells to black
+                        'if': {'column_id': 'all'},
+                        'color': 'white'
+                    },
+                    {
+                        # Set the font color for cells in the 'Name' column to white
+                        # when the row is highlighted
+                        'if': {'column_id': 'Name', 'row_index': 'odd'},
+                        'color': 'black'
+                    }
+                ],
+                editable=False,
+                page_size=5,
+                sort_mode='multi',
+                sort_action='native',
+                filter_action='native',
+            )
 
 
-
-
-
-
-            return dcc.Graph(id='classification-plot', figure=fig)
+            return dcc.Graph(id='classification-plot', figure=fig), "placeholder", table
 
     else:
         return f'''Need to create non-liner classifier'''
