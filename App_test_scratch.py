@@ -17,6 +17,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
 import sklearn.metrics
 from sklearn.metrics import accuracy_score
 from scipy.stats import spearmanr
@@ -493,7 +494,7 @@ app.layout = html.Div([
                 dbc.Row(html.Div(id='classification-div', children=[
                     html.Div(id='classification-plot'),
                     html.Div(id="classification-results", style={"display": "none"}),
-                    html.Div(id = "classification-tbl", style={"display": "none"})
+                    html.Div(id = "knn-output", style={"display": "none"})
                 ]))
 
                 ])
@@ -2545,45 +2546,26 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_rf, json
 @app.callback(
     Output("classification-div", "children"),
     [Input("button-classification", "n_clicks"),
-     Input("button_linear", "n_clicks"),
-     Input("button_nonlinear", "n_clicks"),
+     Input("svm-button", "n_clicks"),
+     Input("rfclass-button", "n_clicks"),
      Input('intermediate-value', 'data')],
     [Input("dropdown_x_class", "value"),
      Input("dropdown_y_class", "value")]
 )
-def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlinear, jsonified_cleaned_data, feature_columns, target_column):
-    if n_clicks_class is not None and n_clicks_linear % 2 == 1:
+def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, jsonified_cleaned_data, feature_columns, target_column):
+    if n_clicks_class is not None and n_clicks_svm% 2 == 1:
         if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
             print("check")
             df = pd.read_json(jsonified_cleaned_data, orient='split')
-            #df.dropna(subset=[target_column], inplace=True)
-            #(df[target_column].unique())
 
-
-
-            #unique_values = df[target_column].unique()
-            #if set(unique_values) == {0, 1}:
-            #    # Convert the target column to a categorical column
-            #    df[target_column] = df[target_column].astype('category')
-            #else:
-            #    raise ValueError("Target column must contain only 0 and 1.")
-
-            # encode target variable if needed
-            #if df[target_column].dtype in ["float", "int", "bool"]:
-            #    return html.Div([
-            #        html.Center(html.H2(
-            #            'This target variable is NOT a categorical variable and therefore not appropriate to use for Classification.')),
-            #    ])
-            #else:
-            #    pass
 
             non_numeric_features = df[feature_columns].select_dtypes(exclude='number').columns
 
-##come back to this tomorrow - issue is having trouble accessing the encoded variables, and the selected variables minus the initial name of the encoded variables
+
 
             # Create an instance of the OneHotEncoder class
             encoder = OneHotEncoder()
-            print(feature_columns)
+
             selected_features = feature_columns
             new_column_names = []
             dropped_columns = []
@@ -2608,187 +2590,211 @@ def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlin
                 if column in dropped_columns:
                     combined_columns.remove(column)
 
-            #X = df[all_features]
-            print(selected_features)
-            #print(new_column_names)
-            #print(dropped_columns)
-            print(combined_columns)
 
-            print("made it after encoding")
-
-            #df = df[feature_columns]
-            #print(df.columns)
-
-
-            #preprocessing step 1 - impute missing values
             df = impute_and_remove(df)
-            #print("df after imputation". df.columns)
 
 
             df = standardize_inputs_class(df, target_column)
 
-            print("made it after standardization")
-            #print(df.columns)
 
+
+            X = df[combined_columns] #this already has the chosen columns just named after the OHE
+            y = df[target_column]
+
+
+            #encode target vars
+            le = LabelEncoder()
+            y_encoded = le.fit_transform(y)
+
+            #split data
+            X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
+
+            # Model complexity
+            neighboors = np.arange(1, 30)
+            train_accuracy = []
+            test_accuracy = []
+
+            # Loop over different values of k
+            for i, k in enumerate(neighboors):
+                # k from 1 to 30(exclude)
+                knn = KNeighborsClassifier(n_neighbors=k)
+                # fit with knn
+                knn.fit(X_train, y_train)
+                train_accuracy.append(knn.score(X_train, y_train))  # train accuracy
+                test_accuracy.append(knn.score(X_test, y_test))
+
+            max_test_accuracy = np.max(test_accuracy)
+            best_k = neighboors[np.argmax(test_accuracy)]
+            print(best_k)
+
+            #knn_model = KNeighborsClassifier(n_neighbors=best_k)
+            #y_pred = knn_model.predict(X_test)
+            #y_true = y_test
+
+            #print(y_pred)
+
+            trace1 = go.Scatter(
+                x=neighboors,
+                y=train_accuracy,
+                mode="lines",
+                name="train_accuracy",
+                marker=dict(color='rgb(255, 0, 0)'),
+                text="train_accuracy")
+            # Creating trace2
+            trace2 = go.Scatter(
+                x=neighboors,
+                y=test_accuracy,
+                mode="lines+markers",
+                name="test_accuracy",
+                marker=dict(color='rgb(104,111,254)'),
+                text="test_accuracy")
+            data = [trace1, trace2]
+            layout = dict(
+                title='K Value vs Accuracy',
+                xaxis=dict(title='Number of Neighbors', ticklen=10, zeroline=False, showgrid=False,
+                           tickfont=dict(color='white'), showline=False),
+                yaxis=dict(linecolor='white', tickcolor='white', showgrid=False, tickfont=dict(color='white'),
+                           zeroline=False),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0, 0, 0, 0)',
+                font=dict(color='white')
+            )
+            fig = dict(data=data, layout=layout)
+
+
+
+            acc = "Best accuracy is {} with K = {}".format(np.max(test_accuracy), 1 + test_accuracy.index(np.max(test_accuracy)))
+
+
+
+
+            #accuracy = accuracy_score(y_test, predictions)
+            #print('Accuracy:', accuracy)
+
+
+            #results = pd.DataFrame({
+            #    "Actual": y_test,
+            #    "Predicted": predictions
+            #})
+            #table = dash_table.DataTable(
+            #    id="table",
+            #    columns=[{"name": col, "id": col} for col in results.columns],
+            #    data=results.to_dict("records"),
+            #    style_header={'backgroundColor': 'rgba(0,0,0,0)',
+            #                  'color': 'white',
+            #                  'fontWeight': 'bold',
+            #                  'textAlign': 'center', },
+            #    style_table={'overflowX': 'scroll'},
+            #    style_cell={'minWidth': '180px', 'width': '180px',
+            #                'maxWidth': '180px', 'whiteSpace': 'normal',
+            #               'backgroundColor': 'rgba(0,0,0,0)',
+            #                'color': 'white'},
+            #    style_data_conditional=[
+             #       {
+             #           # Set the font color for all cells to black
+             #           'if': {'column_id': 'all'},
+             #           'color': 'white'
+             #       },
+             #      {
+             #           # Set the font color for cells in the 'Name' column to white
+             #          # when the row is highlighted
+             #           'if': {'column_id': 'Name', 'row_index': 'odd'},
+             #           'color': 'black'
+             #       }
+             #   ],
+             #   editable=False,
+             #   page_size=5,
+             #   sort_mode='multi',
+             #   sort_action='native',
+             #   filter_action='native',
+            #)
+
+
+            return dcc.Graph(id='classification-plot', figure=fig), acc,  html.Div([
+                dcc.Slider(
+                    id='k-slider',
+                    min=1,
+                    max=30,
+                    step=1,
+                    value=5
+                ),
+            ])
+
+
+@app.callback(
+    Output("knn-output", "children"),
+    [Input("button-classification", "n_clicks"),
+     Input("svm-button", "n_clicks"),
+     Input("rfclass-button", "n_clicks"),
+     Input('intermediate-value', 'data')],
+    [Input("dropdown_x_class", "value"),
+     Input("dropdown_y_class", "value"),
+     Input("k-slider", "value")]
+)
+def run_knn(n_clicks_class, n_clicks_svm, rf_class, jsonified_cleaned_data,feature_columns , target_column ,k):
+    if n_clicks_class is not None and n_clicks_svm% 2 == 1:
+        if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
+            print("check")
+            df = pd.read_json(jsonified_cleaned_data, orient='split')
+
+
+            non_numeric_features = df[feature_columns].select_dtypes(exclude='number').columns
+
+
+
+            # Create an instance of the OneHotEncoder class
+            encoder = OneHotEncoder()
+
+            selected_features = feature_columns
+            new_column_names = []
+            dropped_columns = []
+
+            # Encode or drop the non-numeric features based on the degree of cardinality - if a categorical feature has more than 4 unique classes then drop the variable as it may add too many dimensions
+            for feature in non_numeric_features:
+                if df[feature].nunique() < 4:
+                    #selected_features.append(feature)
+                    one_hot = encoder.fit_transform(df[[feature]])
+                    # Generate a list of names for the one-hot encoded columns based on the unique values of the feature
+                    column_names = [f"{feature}_{value}" for value in df[feature].unique()]
+                    new_column_names.extend(column_names)
+                    dropped_columns.append(feature)
+                    one_hot_df = pd.DataFrame(one_hot.toarray(), columns=column_names)
+                    df = pd.concat([df, one_hot_df], axis=1)
+                    df = df.drop(columns=[feature])
+                else:
+                    df = df.drop(columns=[feature])
+
+            combined_columns = selected_features + new_column_names
+            for column in combined_columns:
+                if column in dropped_columns:
+                    combined_columns.remove(column)
+
+
+            df = impute_and_remove(df)
+
+
+            df = standardize_inputs_class(df, target_column)
 
 
 
             X = df[combined_columns] #this already has the chosen columns just named after the OHE
-            print(X)
             y = df[target_column]
 
+
+            #encode target vars
             le = LabelEncoder()
             y_encoded = le.fit_transform(y)
-            print(y_encoded)
 
+            #split data
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
-            #print(X_test)
-            model = LogisticRegression()
-            print("model is running")
-            model.fit(X_train, y_train)
-            probs = model.predict_proba(X_test)[:, 1]
-            print(probs)
-            #print(X_test.iloc[:, 0])
-            #print(len(y_test))
 
+            # Build and fit KNN model using value of k
+            knn = KNeighborsClassifier(n_neighbors=k)
+            knn.fit(X_train, y_train)
 
-            predictions = model.predict(X_test)
-            print(predictions)
-
-            # Create a scatter plot of the data, coloring the points by their predicted labels
-            #fig = px.scatter(x=X_test.iloc[:, 0], y=X_test.iloc[:, 1], color=predictions)
-
-            def sigmoid(x):
-                return 1 / (1 + np.exp(-x))
-
-            # Calculate the output of the sigmoid function for each predicted probability
-            output = sigmoid(probs)
-
-            # Create a trace for the sigmoid function
-            #trace = go.Scatter(x=probs, y=output, mode='lines', name='Sigmoid function')
-
-            predictions_unencoded = le.inverse_transform(predictions)
-
-            class_labels = le.classes_
-
-            # Create a trace for the true class labels
-            pred_values = list(set(predictions))
-
-            if len(set(y_encoded)) == 2:
-
-                # Generate a list of colors for each unique value of y
-                colors = ['red', 'blue', 'green', 'yellow', 'black']
-                color_map = {pred_values[i]: colors[i] for i in range(len(pred_values))}
-
-                # Map the colors to the markers in the scatter plot
-                marker_colors = [color_map[pred] for pred in predictions]
-
-                fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_test, probs)
-
-                # Create a trace for the TPR and FPR
-                roc_curve = go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC curve')
-
-                # Create a trace for the 50% threshold line
-                threshold_line = go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='50% threshold',
-                                            line=dict(color='red', dash='dash'))
-
-                # Create a figure with the ROC curve trace and the 50% threshold line trace
-                fig = go.Figure(data=[roc_curve, threshold_line])
-
-                fig.update_xaxes(showgrid=False)
-                fig.update_yaxes(showgrid=False)
-                fig.update_layout({
-                    'plot_bgcolor': 'rgba(0, 0, 0, 0)',
-                    'paper_bgcolor': 'rgba(0, 0, 0, 0)',
-                })
-                fig.update_layout(
-                    title={
-                        'y': 0.9,
-                        'x': 0.5,
-                        'xanchor': 'center',
-                        'yanchor': 'top'})
-                fig.update_layout(title_font_color="white",
-                                  font_color="white")
-
-                # Add a title and axis labels
-                fig.update_layout(title='ROC curve', xaxis_title='False Positive Rate',
-                                  yaxis_title='True Positive Rate')
-
-                accuracy = accuracy_score(y_test, predictions)
-                print('Accuracy:', accuracy)
-            elif len(set(y_encoded)) > 2:
-
-                # Calculate the confusion matrix
-                confusion_matrix = sklearn.metrics.confusion_matrix(y_test, predictions)
-
-                # Create a list of lists with the confusion matrix values
-                matrix_values = [[str(value) for value in row] for row in confusion_matrix]
-
-                # Create a table trace
-                trace = go.Table(
-                    header=dict(values=class_labels),
-                    cells=dict(values=matrix_values)
-                )
-
-                # Calculate the number of correct and incorrect classifications
-                num_correct = sum([confusion_matrix[i][i] for i in range(len(class_labels))])
-                num_incorrect = sum([sum(row) - row[i] for i, row in enumerate(confusion_matrix)])
-
-                # Create a list of annotations for the labels
-                annotations = [
-                    dict(xref='paper', yref='paper', x=-0.2, y=-0.1, text=f'Correct: {num_correct}', showarrow=False),
-                    dict(xref='paper', yref='paper', x=-0.2, y=-0.2, text=f'Incorrect: {num_incorrect}',
-                         showarrow=False)
-                ]
-
-                # Create a figure with the table trace and annotations
-                fig = go.Figure(data=[trace], layout=go.Layout(annotations=annotations))
-
-                # Customize the appearance of the plot
-                fig.update_layout(title='Confusion Matrix', xaxis_title='Predicted Label', yaxis_title='True Label')
-
-            results = pd.DataFrame({
-                "Actual": y_test,
-                "Predicted": predictions
-            })
-            table = dash_table.DataTable(
-                id="table",
-                columns=[{"name": col, "id": col} for col in results.columns],
-                data=results.to_dict("records"),
-                style_header={'backgroundColor': 'rgba(0,0,0,0)',
-                              'color': 'white',
-                              'fontWeight': 'bold',
-                              'textAlign': 'center', },
-                style_table={'overflowX': 'scroll'},
-                style_cell={'minWidth': '180px', 'width': '180px',
-                            'maxWidth': '180px', 'whiteSpace': 'normal',
-                            'backgroundColor': 'rgba(0,0,0,0)',
-                            'color': 'white'},
-                style_data_conditional=[
-                    {
-                        # Set the font color for all cells to black
-                        'if': {'column_id': 'all'},
-                        'color': 'white'
-                    },
-                    {
-                        # Set the font color for cells in the 'Name' column to white
-                        # when the row is highlighted
-                        'if': {'column_id': 'Name', 'row_index': 'odd'},
-                        'color': 'black'
-                    }
-                ],
-                editable=False,
-                page_size=5,
-                sort_mode='multi',
-                sort_action='native',
-                filter_action='native',
-            )
-
-
-            return dcc.Graph(id='classification-plot', figure=fig), "placeholder", table
-
-    else:
-        return f'''Need to create non-liner classifier'''
+            # Calculate train and test accuracy
+            train_accuracy = knn.score(X_train, y_train)
+            test_accuracy = knn.score(X_test, y_test)
 
 if __name__ == "__main__":
     app.run_server(debug=True)
