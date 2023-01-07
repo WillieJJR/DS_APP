@@ -2439,38 +2439,40 @@ def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlin
 
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
             #print(X_test)
-            model = LogisticRegression()
-            print("model is running")
-            model.fit(X_train, y_train)
-            probs = model.predict_proba(X_test)[:, 1]
-            print(probs)
-            #print(X_test.iloc[:, 0])
-            #print(len(y_test))
-
-
-            predictions = model.predict(X_test)
-            print(predictions)
-
-            # Create a scatter plot of the data, coloring the points by their predicted labels
-            #fig = px.scatter(x=X_test.iloc[:, 0], y=X_test.iloc[:, 1], color=predictions)
-
-            def sigmoid(x):
-                return 1 / (1 + np.exp(-x))
-
-            # Calculate the output of the sigmoid function for each predicted probability
-            output = sigmoid(probs)
-
-            # Create a trace for the sigmoid function
-            #trace = go.Scatter(x=probs, y=output, mode='lines', name='Sigmoid function')
-
-            predictions_unencoded = le.inverse_transform(predictions)
-
-            class_labels = le.classes_
-
-            # Create a trace for the true class labels
-            pred_values = list(set(predictions))
 
             if len(set(y_encoded)) == 2:
+
+                model = LogisticRegression()
+                print("model is running")
+                model.fit(X_train, y_train)
+                probs = model.predict_proba(X_test)[:, 1]
+                print(probs)
+                #print(X_test.iloc[:, 0])
+                #print(len(y_test))
+
+
+                predictions = model.predict(X_test)
+                print(predictions)
+
+                # Create a scatter plot of the data, coloring the points by their predicted labels
+                #fig = px.scatter(x=X_test.iloc[:, 0], y=X_test.iloc[:, 1], color=predictions)
+
+                def sigmoid(x):
+                    return 1 / (1 + np.exp(-x))
+
+                # Calculate the output of the sigmoid function for each predicted probability
+                output = sigmoid(probs)
+
+                # Create a trace for the sigmoid function
+                #trace = go.Scatter(x=probs, y=output, mode='lines', name='Sigmoid function')
+
+                predictions_unencoded = le.inverse_transform(predictions)
+
+                class_labels = le.classes_
+
+                # Create a trace for the true class labels
+                pred_values = list(set(predictions))
+
 
                 # Generate a list of colors for each unique value of y
                 colors = ['red', 'blue', 'green', 'yellow', 'black']
@@ -2512,7 +2514,40 @@ def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlin
 
                 accuracy = accuracy_score(y_test, predictions)
                 print('Accuracy:', accuracy)
+
             elif len(set(y_encoded)) > 2:
+
+                #model = LogisticRegression(multi_class='ovr', solver='liblinear')
+                #model = LogisticRegression()
+                model = RandomForestClassifier(n_estimators=100)
+                print("model is running")
+                model.fit(X_train, y_train)
+                #probs = model.predict_proba(X_test)[:, 1]
+                #print(probs)
+                # print(X_test.iloc[:, 0])
+                # print(len(y_test))
+
+                predictions = model.predict(X_test)
+                print(predictions)
+
+                # Create a scatter plot of the data, coloring the points by their predicted labels
+                # fig = px.scatter(x=X_test.iloc[:, 0], y=X_test.iloc[:, 1], color=predictions)
+
+                def sigmoid(x):
+                    return 1 / (1 + np.exp(-x))
+
+                # Calculate the output of the sigmoid function for each predicted probability
+                #output = sigmoid(probs)
+
+                # Create a trace for the sigmoid function
+                # trace = go.Scatter(x=probs, y=output, mode='lines', name='Sigmoid function')
+
+                predictions_unencoded = le.inverse_transform(predictions)
+
+                class_labels = le.classes_
+
+                # Create a trace for the true class labels
+                pred_values = list(set(predictions))
 
                 # Calculate the confusion matrix
                 confusion_matrix = sklearn.metrics.confusion_matrix(y_test, predictions)
@@ -2542,6 +2577,9 @@ def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlin
 
                 # Customize the appearance of the plot
                 fig.update_layout(title='Confusion Matrix', xaxis_title='Predicted Label', yaxis_title='True Label')
+
+                accuracy = accuracy_score(y_test, predictions)
+                print('Accuracy:', accuracy)
 
             results = pd.DataFrame({
                 "Actual": y_test,

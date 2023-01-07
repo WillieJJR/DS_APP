@@ -245,8 +245,7 @@ button_container = html.Div(
 
 # Use the html.Div component to create a container for the Kmeans buttons
 button_predictive_analytics_container = html.Div(
-    children=[button_regression, button_classification, button_placeholder,
-              html.Div([button_linear, html.Br(), button_nonlinear], style={"display": "block"})],
+    children=[button_regression, button_classification, button_placeholder],
     style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}
 )
 
@@ -430,6 +429,7 @@ app.layout = html.Div([
                 ], className="row"),
 
                 dbc.Row([button_predictive_analytics_container]),
+                html.Div(id="additional-buttons"),
                 dbc.Row([
                     dbc.Col(
                         dcc.Dropdown(
@@ -830,20 +830,35 @@ def reset_button_clicks_kmeans(n_clicks_regression, n_clicks_classification, n_c
         return n_clicks_regression, n_clicks_classification, n_clicks_placeholder
 
 
-#######Button resets for Predictive Analytics - Linearity#########
+#######Button resets for Predictive Analytics - Linear Regression#########
 
 @app.callback(
-    [Output('button_linear', 'n_clicks'), Output('button_nonlinear', 'n_clicks')],
-    [Input('button_linear', 'n_clicks'), Input('button_nonlinear', 'n_clicks')]
+    [Output('linearregression-button', 'n_clicks'), Output('randomforest-button', 'n_clicks')],
+    [Input('linearregression-button', 'n_clicks'), Input('randomforest-button', 'n_clicks')]
 )
-def reset_button_clicks_linear_nonlinear(n_clicks_linear, n_clicks_nonlinear):
+def reset_button_clicks_regression(n_clicks_linear, n_clicks_rf):
     if (n_clicks_linear is not None and n_clicks_linear % 2 == 1 and
-        n_clicks_nonlinear is not None and n_clicks_nonlinear % 2 == 1):
+        n_clicks_rf is not None and n_clicks_rf % 2 == 1):
         # Reset the n_clicks of both buttons to 0
         return 0, 0
     else:
         # Return the current n_clicks of both buttons
-        return n_clicks_linear, n_clicks_nonlinear
+        return n_clicks_linear, n_clicks_rf
+
+@app.callback(
+    [Output('svm-button', 'n_clicks'), Output('rfclass-button', 'n_clicks')],
+    [Input('svm-button', 'n_clicks'), Input('rfclass-button', 'n_clicks')]
+)
+def reset_button_clicks_classification(n_clicks_svm, n_clicks_rfclass):
+    if (n_clicks_svm is not None and n_clicks_svm % 2 == 1 and
+        n_clicks_rfclass is not None and n_clicks_rfclass % 2 == 1):
+        # Reset the n_clicks of both buttons to 0
+        return 0, 0
+    else:
+        # Return the current n_clicks of both buttons
+        return n_clicks_svm, n_clicks_rfclass
+
+
 
 
 #########Dynamic button actions for Feature Exploration tab (Scatterplot - Button 1, Distribution Plot - Button 2, Feature Importance plot - Button 3)##########
@@ -1193,33 +1208,35 @@ def update_placeholder_plot_style(n_clicks_classification, n_clicks_regression, 
 
 
 
-#########Dynamic button actions for Linearity (Regression - Button 1, Classification - Button 2, Placeholder - Button 3)##########
+#########Dynamic button actions for model selection##########
+
+
 @app.callback(
-    Output('button_linear', 'style'),
-    [Input('button_linear', 'n_clicks'), Input('button_nonlinear', 'n_clicks')]
+    Output('linearregression-button', 'style'),
+    [Input('linearregression-button', 'n_clicks'), Input('randomforest-button', 'n_clicks')]
 )
-def update_button_style_linear(n_clicks_linear, n_clicks_nonlinear):
-    if n_clicks_nonlinear is not None and n_clicks_nonlinear % 2 == 1:
+def update_button_style_lr(n_clicks_lr, n_clicks_rf):
+    if n_clicks_rf is not None and n_clicks_rf % 2 == 1:
         return {
             'backgroundColor': 'rgba(211, 211, 211, 0.5)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '0%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
-    elif n_clicks_linear is not None and n_clicks_linear % 2 == 1:
+    elif n_clicks_lr is not None and n_clicks_lr % 2 == 1:
         # Change the style of button-2 to active when it is clicked an odd number of times
         return {
             'backgroundColor': 'rgba(0, 255, 0, 0.5)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '0%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
     else:
@@ -1228,40 +1245,41 @@ def update_button_style_linear(n_clicks_linear, n_clicks_nonlinear):
             'backgroundColor': 'rgba(0,0,0,0.3)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '7%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
 
 
+
 @app.callback(
-    Output('button_nonlinear', 'style'),
-    [Input('button_linear', 'n_clicks'), Input('button_nonlinear', 'n_clicks')]
+    Output('randomforest-button', 'style'),
+    [Input('linearregression-button', 'n_clicks'), Input('randomforest-button', 'n_clicks')]
 )
-def update_button_style_nonlinear(n_clicks_linear, n_clicks_nonlinear):
-    if n_clicks_linear is not None and n_clicks_linear % 2 == 1:
+def update_button_style_svm(n_clicks_lr, n_clicks_rf):
+    if n_clicks_lr is not None and n_clicks_lr % 2 == 1:
         return {
             'backgroundColor': 'rgba(211, 211, 211, 0.5)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '0%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
-    elif n_clicks_nonlinear is not None and n_clicks_nonlinear % 2 == 1:
+    elif n_clicks_rf is not None and n_clicks_rf % 2 == 1:
         # Change the style of button-2 to active when it is clicked an odd number of times
         return {
             'backgroundColor': 'rgba(0, 255, 0, 0.5)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '0%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
     else:
@@ -1270,10 +1288,94 @@ def update_button_style_nonlinear(n_clicks_linear, n_clicks_nonlinear):
             'backgroundColor': 'rgba(0,0,0,0.3)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '7%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+
+
+@app.callback(
+    Output('svm-button', 'style'),
+    [Input('svm-button', 'n_clicks'), Input('rfclass-button', 'n_clicks')]
+)
+def update_button_style_svm(n_clicks_svm, n_clicks_rfclass):
+    if n_clicks_rfclass is not None and n_clicks_rfclass % 2 == 1:
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_svm is not None and n_clicks_svm % 2 == 1:
+        # Change the style of button-2 to active when it is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    else:
+        # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0,0,0,0.3)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+
+
+@app.callback(
+    Output('rfclass-button', 'style'),
+    [Input('svm-button', 'n_clicks'), Input('rfclass-button', 'n_clicks')]
+)
+def update_button_style_rfclass(n_clicks_svm, n_clicks_rfclass):
+    if n_clicks_svm is not None and n_clicks_svm % 2 == 1:
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_rfclass is not None and n_clicks_rfclass % 2 == 1:
+        # Change the style of button-2 to active when it is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    else:
+        # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0,0,0,0.3)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
 
@@ -1448,21 +1550,23 @@ def toggle_dropdown_visibility_featimp_var(button_featimp_click, button_scatter_
         dash.dependencies.Output('dropdown_x_regression', 'value'),
     ],
     [
-        dash.dependencies.Input('button-regression', 'n_clicks'),
+        dash.dependencies.Input('linearregression-button', 'n_clicks'),
+        dash.dependencies.Input('randomforest-button', 'n_clicks'),
         dash.dependencies.Input('button-classification', 'n_clicks')
+        #dash.dependencies.Input('button-regression', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_x_var_regression(button_regression_click, button_classification_click):
+def toggle_dropdown_visibility_x_var_regression(lr_button, rf_button, button_classification_click):
 
     if (button_classification_click is None) or (button_classification_click % 2 == 0):
 
-        if button_regression_click is None:
+        if lr_button is None and rf_button is None:
             return [
                 {'display': 'none', 'color': 'black', 'textAlign': 'center'},
                 None
             ]
 
-        if button_regression_click is not None and button_regression_click % 2 == 1:
+        if (lr_button is not None or rf_button is not None) and (lr_button % 2 == 1 or rf_button % 2 == 1):
             # Make the dropdown visible when Button 1 is clicked an odd number of times
             return [
                 {'display': 'block', 'color': 'black', 'textAlign': 'center'},
@@ -1487,21 +1591,23 @@ def toggle_dropdown_visibility_x_var_regression(button_regression_click, button_
         dash.dependencies.Output('dropdown_y_regression', 'value'),
     ],
     [
-        dash.dependencies.Input('button-regression', 'n_clicks'),
+        dash.dependencies.Input('linearregression-button', 'n_clicks'),
+        dash.dependencies.Input('randomforest-button', 'n_clicks'),
         dash.dependencies.Input('button-classification', 'n_clicks')
+        #dash.dependencies.Input('button-regression', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_y_var_regression(button_regression_click, button_classification_click):
+def toggle_dropdown_visibility_y_var_regression(lr_button, rf_button, button_classification_click):
 
     if (button_classification_click is None) or (button_classification_click % 2 == 0):
 
-        if button_regression_click is None:
+        if lr_button is None and rf_button is None:
             return [
                 {'display': 'none', 'color': 'black', 'textAlign': 'center'},
                 None
             ]
 
-        if button_regression_click is not None and button_regression_click % 2 == 1:
+        if (lr_button is not None or rf_button is not None) and (lr_button % 2 == 1 or rf_button % 2 == 1):
             # Make the dropdown visible when Button 1 is clicked an odd number of times
             return [
                 {'display': 'block', 'color': 'black', 'textAlign': 'center'},
@@ -1528,20 +1634,21 @@ def toggle_dropdown_visibility_y_var_regression(button_regression_click, button_
     ],
     [
         dash.dependencies.Input('button-regression', 'n_clicks'),
-        dash.dependencies.Input('button-classification', 'n_clicks')
+        dash.dependencies.Input('svm-button', 'n_clicks'),
+        dash.dependencies.Input('rfclass-button', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_x_var_classification(button_regression_click, button_classification_click):
+def toggle_dropdown_visibility_x_var_classification(button_regression_click, svm_button, rfclass_button):
 
     if (button_regression_click is None) or (button_regression_click % 2 == 0):
 
-        if button_classification_click is None:
+        if svm_button is None and rfclass_button is None:
             return [
                 {'display': 'none', 'color': 'black', 'textAlign': 'center'},
                 None
             ]
 
-        if button_classification_click is not None and button_classification_click % 2 == 1:
+        if (svm_button is not None or rfclass_button is not None) and (svm_button % 2 == 1 or rfclass_button % 2 == 1):
             # Make the dropdown visible when Button 1 is clicked an odd number of times
             return [
                 {'display': 'block', 'color': 'black', 'textAlign': 'center'},
@@ -1567,20 +1674,21 @@ def toggle_dropdown_visibility_x_var_classification(button_regression_click, but
     ],
     [
         dash.dependencies.Input('button-regression', 'n_clicks'),
-        dash.dependencies.Input('button-classification', 'n_clicks')
+        dash.dependencies.Input('svm-button', 'n_clicks'),
+        dash.dependencies.Input('rfclass-button', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_y_var_classification(button_regression_click, button_classification_click):
+def toggle_dropdown_visibility_y_var_classification(button_regression_click, svm_button, rfclass_button):
 
     if (button_regression_click is None) or (button_regression_click % 2 == 0):
 
-        if button_classification_click is None:
+        if svm_button is None and rfclass_button is None:
             return [
                 {'display': 'none', 'color': 'black', 'textAlign': 'center'},
                 None
             ]
 
-        if button_classification_click is not None and button_classification_click % 2 == 1:
+        if (svm_button is not None or rfclass_button is not None) and (svm_button % 2 == 1 or rfclass_button % 2 == 1):
             # Make the dropdown visible when Button 1 is clicked an odd number of times
             return [
                 {'display': 'block', 'color': 'black', 'textAlign': 'center'},
@@ -1597,7 +1705,6 @@ def toggle_dropdown_visibility_y_var_classification(button_regression_click, but
             {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
         ]
-
 
 ##########Dynamic Charts for Feature Exploration Tab############
 
@@ -1881,6 +1988,103 @@ def update_warning_message(dropdown_x_value, dropdown_y_value):
         return ''
 
 
+##############testing nested buttons
+
+@app.callback(
+    Output("additional-buttons", "children"),
+    [Input("button-regression", "n_clicks"), Input("button-classification", "n_clicks"), Input("button-placeholder", "n_clicks")],
+)
+def render_additional_buttons(btn1_clicks, btn2_clicks, btn3_clicks):
+    ctx = dash.callback_context
+    if btn1_clicks is None and btn2_clicks is None and btn3_clicks is None:
+        return []
+    else:
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        if btn1_clicks % 2 == 1:
+            return [
+                dbc.Row(
+                    [
+                        html.Div([
+                        html.Button("Linear Regression Model", id="linearregression-button",
+                                    n_clicks=0,
+                                    n_clicks_timestamp=0,
+                                    style={
+                                        'backgroundColor': 'rgba(0,0,0,0.3)',
+                                        'color': 'white',
+                                        'text-align': 'center',
+                                        #'margin-right': '10px',
+                                        # add a right margin to create a space between the buttons
+                                        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+                                        'height': '30px',  # set the height of the buttons
+                                        'width': '200px',  # set the width of the buttons
+                                        'font-size': '16px'  # set the font size of the button labels
+                                    }
+                                    ),
+                        html.Button("Random Forest Model", id="randomforest-button",
+                                    n_clicks=0,
+                                    n_clicks_timestamp=0,
+                                    style={
+                                        'backgroundColor': 'rgba(0,0,0,0.3)',
+                                        'color': 'white',
+                                        'text-align': 'center',
+                                        #'margin-right': '10px',
+                                        # add a right margin to create a space between the buttons
+                                        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+                                        'height': '30px',  # set the height of the buttons
+                                        'width': '200px',  # set the width of the buttons
+                                        'font-size': '16px'  # set the font size of the button labels
+                                    }
+                                    )
+                            ],
+                            style={"display": "flex", "justify-content": "center"}, className="p-4"),
+                    ]
+                )
+            ]
+        elif btn2_clicks % 2 == 1:
+            return [
+                dbc.Row(
+                    [
+                        html.Div([
+                        html.Button("SVM Model", id="svm-button",
+                                    n_clicks=0,
+                                    n_clicks_timestamp=0,
+                                    style={
+                                        'backgroundColor': 'rgba(0,0,0,0.3)',
+                                        'color': 'white',
+                                        'text-align': 'center',
+                                        #'margin-right': '10px',
+                                        # add a right margin to create a space between the buttons
+                                        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+                                        'height': '30px',  # set the height of the buttons
+                                        'width': '200px',  # set the width of the buttons
+                                        'font-size': '16px'  # set the font size of the button labels
+                                    }
+                                    ),
+                        html.Button("Random Forest Model", id="rfclass-button",
+                                    n_clicks=0,
+                                    n_clicks_timestamp=0,
+                                    style={
+                                        'backgroundColor': 'rgba(0,0,0,0.3)',
+                                        'color': 'white',
+                                        'text-align': 'center',
+                                        #'margin-right': '10px',
+                                        # add a right margin to create a space between the buttons
+                                        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+                                        'height': '30px',  # set the height of the buttons
+                                        'width': '200px',  # set the width of the buttons
+                                        'font-size': '16px'  # set the font size of the button labels
+                                    }
+                                    ),
+                        ],
+                            style={"display": "flex", "justify-content": "center"}, className="p-4")
+                    ]
+                )
+            ]
+        else:
+            return []
+
+
+
 ########Callbacks for all features in the App#########
 @app.callback(
     Output(component_id='scatter-plot', component_property='children'),
@@ -2102,13 +2306,13 @@ def update_featimp_plots(target_value, jsonified_cleaned_data, n_clicks):
 @app.callback(
     Output("regression-div", "children"),
     [Input("button-regression", "n_clicks"),
-     Input("button_linear", "n_clicks"),
-     Input("button_nonlinear", "n_clicks"),
+     Input("linearregression-button", "n_clicks"),
+     Input("randomforest-button", "n_clicks"),
      Input('intermediate-value', 'data')],
     [Input("dropdown_x_regression", "value"),
      Input("dropdown_y_regression", "value")]
 )
-def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_nonlinear, jsonified_cleaned_data, feature_columns, target_column):
+def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_rf, jsonified_cleaned_data, feature_columns, target_column):
     if n_clicks_regress is not None and n_clicks_linear % 2 == 1:
         if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
@@ -2221,7 +2425,7 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_nonlinea
 
             return dcc.Graph(id='regression-plot', figure=fig), f"R2 Score: {score}", table
 
-    elif n_clicks_regress is not None and n_clicks_nonlinear % 2 == 1:
+    elif n_clicks_regress is not None and n_clicks_rf % 2 == 1:
         if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
 
