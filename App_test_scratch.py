@@ -2627,11 +2627,14 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             best_k = neighboors[np.argmax(test_accuracy)]
             print(best_k)
 
-            #knn_model = KNeighborsClassifier(n_neighbors=best_k)
-            #y_pred = knn_model.predict(X_test)
-            #y_true = y_test
+            best_knn = KNeighborsClassifier(n_neighbors=best_k)
+            best_knn.fit(X_train, y_train)
 
-            #print(y_pred)
+            y_pred = best_knn.predict(X_test)
+            #print(predictions)
+
+
+
 
             trace1 = go.Scatter(
                 x=neighboors,
@@ -2667,134 +2670,66 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
 
 
 
-
             #accuracy = accuracy_score(y_test, predictions)
             #print('Accuracy:', accuracy)
+            print("check:", y_test)
+            var = 'var'
+            print(var)
+            print(len(y_pred))
+            print(len(y_test))
+            results = pd.DataFrame(columns=["Actual", "Predicted"])
+            results["Actual"] = y_test
+            results["Predicted"] = y_pred
+            print(results)
 
 
-            #results = pd.DataFrame({
-            #    "Actual": y_test,
-            #    "Predicted": predictions
-            #})
-            #table = dash_table.DataTable(
-            #    id="table",
-            #    columns=[{"name": col, "id": col} for col in results.columns],
-            #    data=results.to_dict("records"),
-            #    style_header={'backgroundColor': 'rgba(0,0,0,0)',
-            #                  'color': 'white',
-            #                  'fontWeight': 'bold',
-            #                  'textAlign': 'center', },
-            #    style_table={'overflowX': 'scroll'},
-            #    style_cell={'minWidth': '180px', 'width': '180px',
-            #                'maxWidth': '180px', 'whiteSpace': 'normal',
-            #               'backgroundColor': 'rgba(0,0,0,0)',
-            #                'color': 'white'},
-            #    style_data_conditional=[
-             #       {
-             #           # Set the font color for all cells to black
-             #           'if': {'column_id': 'all'},
-             #           'color': 'white'
-             #       },
-             #      {
-             #           # Set the font color for cells in the 'Name' column to white
-             #          # when the row is highlighted
-             #           'if': {'column_id': 'Name', 'row_index': 'odd'},
-             #           'color': 'black'
-             #       }
-             #   ],
-             #   editable=False,
-             #   page_size=5,
-             #   sort_mode='multi',
-             #   sort_action='native',
-             #   filter_action='native',
-            #)
+            # Create a dataframe from the test features and test targets
+            #X_test_unscaled = scaler.inverse_transform(X_test)
+            #print(X_test_unscaled)
+
+            test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)), columns=list(X_test.columns) + ["target"])
+
+            # Add a new column with the predicted values
+            test_df["predictions"] = y_pred
+
+            table = dash_table.DataTable(
+                id="table",
+                columns=[{"name": col, "id": col} for col in test_df.columns],
+                data=test_df.to_dict("records"),
+                style_header={'backgroundColor': 'rgba(0,0,0,0)',
+                              'color': 'white',
+                              'fontWeight': 'bold',
+                              'textAlign': 'center', },
+                style_table={'overflowX': 'scroll'},
+                style_cell={'minWidth': '180px', 'width': '180px',
+                            'maxWidth': '180px', 'whiteSpace': 'normal',
+                           'backgroundColor': 'rgba(0,0,0,0)',
+                            'color': 'white'},
+                style_data_conditional=[
+                    {
+                        # Set the font color for all cells to black
+                        'if': {'column_id': 'all'},
+                        'color': 'white'
+                    },
+                   {
+                        # Set the font color for cells in the 'Name' column to white
+                       # when the row is highlighted
+                        'if': {'column_id': 'Name', 'row_index': 'odd'},
+                        'color': 'black'
+                    }
+                ],
+                editable=False,
+                page_size=5,
+                sort_mode='multi',
+                sort_action='native',
+                filter_action='native',
+            )
 
 
-            return dcc.Graph(id='classification-plot', figure=fig), acc,  html.Div([
-                dcc.Slider(
-                    id='k-slider',
-                    min=1,
-                    max=30,
-                    step=1,
-                    value=5
-                ),
-            ])
-
-
-@app.callback(
-    Output("knn-output", "children"),
-    [Input("button-classification", "n_clicks"),
-     Input("svm-button", "n_clicks"),
-     Input("rfclass-button", "n_clicks"),
-     Input('intermediate-value', 'data')],
-    [Input("dropdown_x_class", "value"),
-     Input("dropdown_y_class", "value"),
-     Input("k-slider", "value")]
-)
-def run_knn(n_clicks_class, n_clicks_svm, rf_class, jsonified_cleaned_data,feature_columns , target_column ,k):
-    if n_clicks_class is not None and n_clicks_svm% 2 == 1:
-        if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
-            print("check")
-            df = pd.read_json(jsonified_cleaned_data, orient='split')
-
-
-            non_numeric_features = df[feature_columns].select_dtypes(exclude='number').columns
+            return dcc.Graph(id='classification-plot', figure=fig), acc, table
 
 
 
-            # Create an instance of the OneHotEncoder class
-            encoder = OneHotEncoder()
-
-            selected_features = feature_columns
-            new_column_names = []
-            dropped_columns = []
-
-            # Encode or drop the non-numeric features based on the degree of cardinality - if a categorical feature has more than 4 unique classes then drop the variable as it may add too many dimensions
-            for feature in non_numeric_features:
-                if df[feature].nunique() < 4:
-                    #selected_features.append(feature)
-                    one_hot = encoder.fit_transform(df[[feature]])
-                    # Generate a list of names for the one-hot encoded columns based on the unique values of the feature
-                    column_names = [f"{feature}_{value}" for value in df[feature].unique()]
-                    new_column_names.extend(column_names)
-                    dropped_columns.append(feature)
-                    one_hot_df = pd.DataFrame(one_hot.toarray(), columns=column_names)
-                    df = pd.concat([df, one_hot_df], axis=1)
-                    df = df.drop(columns=[feature])
-                else:
-                    df = df.drop(columns=[feature])
-
-            combined_columns = selected_features + new_column_names
-            for column in combined_columns:
-                if column in dropped_columns:
-                    combined_columns.remove(column)
-
-
-            df = impute_and_remove(df)
-
-
-            df = standardize_inputs_class(df, target_column)
-
-
-
-            X = df[combined_columns] #this already has the chosen columns just named after the OHE
-            y = df[target_column]
-
-
-            #encode target vars
-            le = LabelEncoder()
-            y_encoded = le.fit_transform(y)
-
-            #split data
-            X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
-
-            # Build and fit KNN model using value of k
-            knn = KNeighborsClassifier(n_neighbors=k)
-            knn.fit(X_train, y_train)
-
-            # Calculate train and test accuracy
-            train_accuracy = knn.score(X_train, y_train)
-            test_accuracy = knn.score(X_test, y_test)
 
 if __name__ == "__main__":
     app.run_server(debug=True)
