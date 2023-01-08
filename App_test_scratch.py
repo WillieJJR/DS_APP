@@ -19,7 +19,10 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 import sklearn.metrics
-from sklearn.metrics import accuracy_score
+#from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score, recall_score
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score
+from sklearn.metrics import classification_report
 from scipy.stats import spearmanr
 import plotly.graph_objects as go
 import plotly.express as px
@@ -2683,10 +2686,6 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             print(results)
 
 
-            # Create a dataframe from the test features and test targets
-            #X_test_unscaled = scaler.inverse_transform(X_test)
-            #print(X_test_unscaled)
-
             test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)), columns=list(X_test.columns) + ["target"])
 
             # Add a new column with the predicted values
@@ -2727,6 +2726,161 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
 
 
             return dcc.Graph(id='classification-plot', figure=fig), acc, table
+
+
+    elif n_clicks_svm is not None and n_clicks_rfclass % 2 == 1:
+
+        if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
+            df = pd.read_json(jsonified_cleaned_data, orient='split')
+
+            non_numeric_features = df[feature_columns].select_dtypes(exclude='number').columns
+
+            # Create an instance of the OneHotEncoder class
+            encoder = OneHotEncoder()
+
+            selected_features = feature_columns
+            new_column_names = []
+            dropped_columns = []
+
+            # Encode or drop the non-numeric features based on the degree of cardinality - if a categorical feature has more than 4 unique classes then drop the variable as it may add too many dimensions
+            for feature in non_numeric_features:
+                if df[feature].nunique() < 4:
+                    # selected_features.append(feature)
+                    one_hot = encoder.fit_transform(df[[feature]])
+                    # Generate a list of names for the one-hot encoded columns based on the unique values of the feature
+                    column_names = [f"{feature}_{value}" for value in df[feature].unique()]
+                    new_column_names.extend(column_names)
+                    dropped_columns.append(feature)
+                    one_hot_df = pd.DataFrame(one_hot.toarray(), columns=column_names)
+                    df = pd.concat([df, one_hot_df], axis=1)
+                    df = df.drop(columns=[feature])
+                else:
+                    df = df.drop(columns=[feature])
+
+            combined_columns = selected_features + new_column_names
+            for column in combined_columns:
+                if column in dropped_columns:
+                    combined_columns.remove(column)
+
+            df = impute_and_remove(df)
+
+            df = standardize_inputs_class(df, target_column)
+
+            X = df[combined_columns]  # this already has the chosen columns just named after the OHE
+            y = df[target_column]
+
+            # encode target vars
+            le = LabelEncoder()
+            y_encoded = le.fit_transform(y)
+
+            # split data
+            X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
+
+            model = RandomForestClassifier()
+
+            model.fit(X_train, y_train)
+
+            y_pred = model.predict(X_test)
+
+            #accuracy = accuracy_score(y_test, y_pred)
+            #print(accuracy)
+
+            # Calculate the F1 score
+            #f1 = f1_score(y_test, y_pred)
+            #print(f1)
+            # Calculate the recall
+            #recall = recall_score(y_test, y_pred)
+            #print(recall)
+
+            # Calculate the classification report
+            #report = classification_report(y_test, y_pred, output_dict=True)
+
+            ###testing
+
+            # Calculate the precision, recall, and f1-score for each class
+            precision, recall, f1, support = precision_recall_fscore_support(y_test, y_pred)
+
+            # Calculate the overall accuracy
+            accuracy = accuracy_score(y_test, y_pred)
+            print(accuracy)
+
+            # Create a dictionary to hold the results
+            results = {}
+            classes = np.unique(y_test)
+
+            # Loop through the classes and add the results to the dictionary
+            #for class_index, class_name in enumerate(classes):
+            #    results[class_name] = {
+            #        "precision": precision[class_index],
+            #        "recall": recall[class_index],
+            #        "f1-score": f1[class_index],
+            #        "support": support[class_index]
+            #    }
+
+            #print(results)
+
+            # Add the overall accuracy to the results
+            #results["accuracy"] = accuracy
+
+            # Convert the results to a list of dictionaries
+            #report_data = [{"Class": class_name, "Precision": metrics["precision"], "Recall": metrics["recall"],
+            #                "F1-score": metrics["f1-score"], "Support": metrics["support"]} for class_name, metrics in
+            #               results.items()]
+
+            #print(report_data)
+
+            ###testing
+
+
+
+            # Print the classification report
+            #print(report)
+
+            #print(f'''Accuracy: {accuracy}\nRecall: {recall}\nF1 Score: {f1_score}''')
+
+            test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)), columns=list(X_test.columns) + ["target"])
+
+            # Add a new column with the predicted values
+            test_df["predictions"] = y_pred
+
+            table = dash_table.DataTable(
+                id="table",
+                columns=[{"name": col, "id": col} for col in test_df.columns],
+                data=test_df.to_dict("records"),
+                style_header={'backgroundColor': 'rgba(0,0,0,0)',
+                              'color': 'white',
+                              'fontWeight': 'bold',
+                              'textAlign': 'center', },
+                style_table={'overflowX': 'scroll'},
+                style_cell={'minWidth': '180px', 'width': '180px',
+                            'maxWidth': '180px', 'whiteSpace': 'normal',
+                           'backgroundColor': 'rgba(0,0,0,0)',
+                            'color': 'white'},
+                style_data_conditional=[
+                    {
+                        # Set the font color for all cells to black
+                        'if': {'column_id': 'all'},
+                        'color': 'white'
+                    },
+                   {
+                        # Set the font color for cells in the 'Name' column to white
+                       # when the row is highlighted
+                        'if': {'column_id': 'Name', 'row_index': 'odd'},
+                        'color': 'black'
+                    }
+                ],
+                editable=False,
+                page_size=5,
+                sort_mode='multi',
+                sort_action='native',
+                filter_action='native',
+            )
+
+
+            #return dcc.Graph(id='classification-plot', figure=fig), acc, table
+            return table
+
+
 
 
 
