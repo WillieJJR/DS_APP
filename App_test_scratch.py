@@ -18,6 +18,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import GridSearchCV
 import sklearn.metrics
 #from sklearn.metrics import accuracy_score
 from sklearn.metrics import accuracy_score, f1_score, recall_score
@@ -2778,9 +2779,85 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
 
             model = RandomForestClassifier()
 
+
+            ####grid search CV
+
+            #param_grid = {
+            #    "n_estimators": [10, 50, 100],
+            #    "max_depth": [None, 5, 10],
+            #    "min_samples_split": [2, 5, 10],
+            #    "min_samples_leaf": [1, 2, 4]
+            #}
+
+            # Define the scoring metric
+            #scoring = "accuracy"
+
+            # Create the grid search object
+            #grid_search = GridSearchCV(model, param_grid, scoring=scoring)
+
+            # Fit the grid search object to the training data
+            #grid_search.fit(X_train, y_train)
+
+            # Print the best hyperparameters
+            #print("Best hyperparameters:", grid_search.best_params_)
+
+            # Get the best model
+            #best_model = grid_search.best_estimator_
+
+            #y_pred = best_model.predict(X_test)
+
+            #probs = best_model.predict_proba(X_test)
+
+            # Evaluate the best model on the test set
+            #accuracy = best_model.score(X_test, y_test)
+
+            ####grid search CV
+
+
             model.fit(X_train, y_train)
 
             y_pred = model.predict(X_test)
+
+            probs = model.predict_proba(X_test)[:, 1]
+
+            accuracy = accuracy_score(y_test, y_pred)
+
+            #colors = ['red', 'blue', 'green', 'yellow', 'black']
+            #color_map = {y_pred[i]: colors[i] for i in range(len(y_pred))}
+
+            # Map the colors to the markers in the scatter plot
+            #marker_colors = [color_map[pred] for pred in y_pred]
+
+            fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_test, probs)
+
+            # Create a trace for the TPR and FPR
+            roc_curve = go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC curve')
+
+            # Create a trace for the 50% threshold line
+            threshold_line = go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='50% threshold',
+                                        line=dict(color='red', dash='dash'))
+
+            # Create a figure with the ROC curve trace and the 50% threshold line trace
+            fig = go.Figure(data=[roc_curve, threshold_line])
+
+            fig.update_xaxes(showgrid=False)
+            fig.update_yaxes(showgrid=False)
+            fig.update_layout({
+                'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+                'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+            })
+            fig.update_layout(
+                title={
+                    'y': 0.9,
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top'})
+            fig.update_layout(title_font_color="white",
+                              font_color="white")
+
+            # Add a title and axis labels
+            fig.update_layout(title='ROC curve', xaxis_title='False Positive Rate',
+                              yaxis_title='True Positive Rate')
 
             #accuracy = accuracy_score(y_test, y_pred)
             #print(accuracy)
@@ -2877,8 +2954,8 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             )
 
 
-            #return dcc.Graph(id='classification-plot', figure=fig), acc, table
-            return table
+            return dcc.Graph(id='classification-plot', figure=fig), f'''Accuracy: {accuracy}''', table
+            #return fig, table
 
 
 
