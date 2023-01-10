@@ -242,6 +242,51 @@ button_nonlinear = html.Button(
 )
 
 
+button_regression_help = html.Button(
+    '?',
+    id='button-regression-help',
+    n_clicks=0,
+    n_clicks_timestamp=0,
+    style={
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'red',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '70%',  # set the border radius to 50% to make the buttons round
+        'height': '30px',  # set the height of the buttons
+        'width': '30px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+)
+
+popovers = html.Div(
+    [
+        # First example - using dbc.PopoverBody
+        html.Button(
+            '?',
+            id='button-regression-help',
+            n_clicks=0,
+            n_clicks_timestamp=0,
+            style={
+                'backgroundColor': 'rgba(0,0,0,0.3)',
+                'color': 'red',
+                'text-align': 'center',
+                'margin-right': '10px',  # add a right margin to create a space between the buttons
+                'border-radius': '70%',  # set the border radius to 50% to make the buttons round
+                'height': '30px',  # set the height of the buttons
+                'width': '30px',  # set the width of the buttons
+                'font-size': '16px'  # set the font size of the button labels
+            }
+        ),
+
+        dbc.Popover(
+            dbc.PopoverBody("My `target` is `popover-target`."),
+            target='button-regression-help',
+            trigger="hover",
+            #is_open = False
+        )
+    ], style={'display': 'flex', 'margin': 'auto', 'justify-content': 'right'})
+
 # Use the html.Div component to create a container for the Feature Exploration buttons
 button_container = html.Div(
     children=[button1, button2, button3],
@@ -254,7 +299,10 @@ button_predictive_analytics_container = html.Div(
     style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}
 )
 
-
+button_help_container = html.Div(
+    children=[button_regression_help],
+    style={'display': 'flex', 'margin': 'auto', 'justify-content': 'right'}  # set the display property to flex to arrange the buttons horizontally
+)
 
 
 button_callout_1 = html.Button(children='Hover here', id='button_callout_1', n_clicks=0, style={
@@ -433,6 +481,7 @@ app.layout = html.Div([
                     )
                 ], className="row"),
 
+                dbc.Row(popovers),
                 dbc.Row([button_predictive_analytics_container]),
                 html.Div(id="additional-buttons"),
                 dbc.Row([
@@ -488,7 +537,6 @@ app.layout = html.Div([
                         )
                         )
                 ], style={'margin': '10px'}),
-
                 dbc.Row(html.Div(id='warning-message-regression', style={'color': 'red', 'fontSize': 20, 'text-align': 'center'})),
                 dbc.Row(html.Div(id='regression-div', children=[
                     html.Div(id='regression-plot'),

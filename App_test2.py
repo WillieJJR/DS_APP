@@ -17,8 +17,13 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import GridSearchCV
 import sklearn.metrics
-from sklearn.metrics import accuracy_score
+#from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score, recall_score
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score
+from sklearn.metrics import classification_report
 from scipy.stats import spearmanr
 import plotly.graph_objects as go
 import plotly.express as px
@@ -237,6 +242,51 @@ button_nonlinear = html.Button(
 )
 
 
+button_regression_help = html.Button(
+    '?',
+    id='button-regression-help',
+    n_clicks=0,
+    n_clicks_timestamp=0,
+    style={
+        'backgroundColor': 'rgba(0,0,0,0.3)',
+        'color': 'red',
+        'text-align': 'center',
+        'margin-right': '10px',  # add a right margin to create a space between the buttons
+        'border-radius': '70%',  # set the border radius to 50% to make the buttons round
+        'height': '30px',  # set the height of the buttons
+        'width': '30px',  # set the width of the buttons
+        'font-size': '16px'  # set the font size of the button labels
+    }
+)
+
+popovers = html.Div(
+    [
+        # First example - using dbc.PopoverBody
+        html.Button(
+            '?',
+            id='button-regression-help',
+            n_clicks=0,
+            n_clicks_timestamp=0,
+            style={
+                'backgroundColor': 'rgba(0,0,0,0.3)',
+                'color': 'red',
+                'text-align': 'center',
+                'margin-right': '10px',  # add a right margin to create a space between the buttons
+                'border-radius': '70%',  # set the border radius to 50% to make the buttons round
+                'height': '30px',  # set the height of the buttons
+                'width': '30px',  # set the width of the buttons
+                'font-size': '16px'  # set the font size of the button labels
+            }
+        ),
+
+        dbc.Popover(
+            dbc.PopoverBody("My `target` is `popover-target`."),
+            target='button-regression-help',
+            trigger="hover",
+            #is_open = False
+        )
+    ], style={'display': 'flex', 'margin': 'auto', 'justify-content': 'right'})
+
 # Use the html.Div component to create a container for the Feature Exploration buttons
 button_container = html.Div(
     children=[button1, button2, button3],
@@ -245,12 +295,14 @@ button_container = html.Div(
 
 # Use the html.Div component to create a container for the Kmeans buttons
 button_predictive_analytics_container = html.Div(
-    children=[button_regression, button_classification, button_placeholder,
-              html.Div([button_linear, html.Br(), button_nonlinear], style={"display": "block"})],
+    children=[button_regression, button_classification, button_placeholder],
     style={'display': 'flex', 'margin': 'auto', 'justify-content': 'center'}
 )
 
-
+button_help_container = html.Div(
+    children=[button_regression_help],
+    style={'display': 'flex', 'margin': 'auto', 'justify-content': 'right'}  # set the display property to flex to arrange the buttons horizontally
+)
 
 
 button_callout_1 = html.Button(children='Hover here', id='button_callout_1', n_clicks=0, style={
@@ -429,7 +481,9 @@ app.layout = html.Div([
                     )
                 ], className="row"),
 
+                #dbc.Row(popovers),
                 dbc.Row([button_predictive_analytics_container]),
+                html.Div(id="additional-buttons"),
                 dbc.Row([
                     dbc.Col(
                         dcc.Dropdown(
@@ -483,7 +537,6 @@ app.layout = html.Div([
                         )
                         )
                 ], style={'margin': '10px'}),
-
                 dbc.Row(html.Div(id='warning-message-regression', style={'color': 'red', 'fontSize': 20, 'text-align': 'center'})),
                 dbc.Row(html.Div(id='regression-div', children=[
                     html.Div(id='regression-plot'),
@@ -493,7 +546,7 @@ app.layout = html.Div([
                 dbc.Row(html.Div(id='classification-div', children=[
                     html.Div(id='classification-plot'),
                     html.Div(id="classification-results", style={"display": "none"}),
-                    html.Div(id = "classification-tbl", style={"display": "none"})
+                    html.Div(id = "knn-output", style={"display": "none"})
                 ]))
 
                 ])
@@ -586,14 +639,17 @@ def standardize_inputs(df, target_column):
     return df_scaled
 
 
-def standardize_inputs_class(df, target_column):
+def standardize_inputs_class(df, target_column, scale=True):
     # Make a copy of the DataFrame
     df_scaled = df.copy()
 
     # Standardize the numeric columns
     scaler = StandardScaler()
     numeric_columns = df_scaled.select_dtypes(include=["int", "float"]).columns
-    df_scaled[numeric_columns] = scaler.fit_transform(df_scaled[numeric_columns])
+    if scale:
+        df_scaled[numeric_columns] = scaler.fit_transform(df_scaled[numeric_columns])
+    else:
+        df_scaled[numeric_columns] = scaler.inverse_transform(df_scaled[numeric_columns])
 
     return df_scaled
 
@@ -830,20 +886,35 @@ def reset_button_clicks_kmeans(n_clicks_regression, n_clicks_classification, n_c
         return n_clicks_regression, n_clicks_classification, n_clicks_placeholder
 
 
-#######Button resets for Predictive Analytics - Linearity#########
+#######Button resets for Predictive Analytics - Linear Regression#########
 
 @app.callback(
-    [Output('button_linear', 'n_clicks'), Output('button_nonlinear', 'n_clicks')],
-    [Input('button_linear', 'n_clicks'), Input('button_nonlinear', 'n_clicks')]
+    [Output('linearregression-button', 'n_clicks'), Output('randomforest-button', 'n_clicks')],
+    [Input('linearregression-button', 'n_clicks'), Input('randomforest-button', 'n_clicks')]
 )
-def reset_button_clicks_linear_nonlinear(n_clicks_linear, n_clicks_nonlinear):
+def reset_button_clicks_regression(n_clicks_linear, n_clicks_rf):
     if (n_clicks_linear is not None and n_clicks_linear % 2 == 1 and
-        n_clicks_nonlinear is not None and n_clicks_nonlinear % 2 == 1):
+        n_clicks_rf is not None and n_clicks_rf % 2 == 1):
         # Reset the n_clicks of both buttons to 0
         return 0, 0
     else:
         # Return the current n_clicks of both buttons
-        return n_clicks_linear, n_clicks_nonlinear
+        return n_clicks_linear, n_clicks_rf
+
+@app.callback(
+    [Output('svm-button', 'n_clicks'), Output('rfclass-button', 'n_clicks')],
+    [Input('svm-button', 'n_clicks'), Input('rfclass-button', 'n_clicks')]
+)
+def reset_button_clicks_classification(n_clicks_svm, n_clicks_rfclass):
+    if (n_clicks_svm is not None and n_clicks_svm % 2 == 1 and
+        n_clicks_rfclass is not None and n_clicks_rfclass % 2 == 1):
+        # Reset the n_clicks of both buttons to 0
+        return 0, 0
+    else:
+        # Return the current n_clicks of both buttons
+        return n_clicks_svm, n_clicks_rfclass
+
+
 
 
 #########Dynamic button actions for Feature Exploration tab (Scatterplot - Button 1, Distribution Plot - Button 2, Feature Importance plot - Button 3)##########
@@ -1193,33 +1264,35 @@ def update_placeholder_plot_style(n_clicks_classification, n_clicks_regression, 
 
 
 
-#########Dynamic button actions for Linearity (Regression - Button 1, Classification - Button 2, Placeholder - Button 3)##########
+#########Dynamic button actions for model selection##########
+
+
 @app.callback(
-    Output('button_linear', 'style'),
-    [Input('button_linear', 'n_clicks'), Input('button_nonlinear', 'n_clicks')]
+    Output('linearregression-button', 'style'),
+    [Input('linearregression-button', 'n_clicks'), Input('randomforest-button', 'n_clicks')]
 )
-def update_button_style_linear(n_clicks_linear, n_clicks_nonlinear):
-    if n_clicks_nonlinear is not None and n_clicks_nonlinear % 2 == 1:
+def update_button_style_lr(n_clicks_lr, n_clicks_rf):
+    if n_clicks_rf is not None and n_clicks_rf % 2 == 1:
         return {
             'backgroundColor': 'rgba(211, 211, 211, 0.5)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '0%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
-    elif n_clicks_linear is not None and n_clicks_linear % 2 == 1:
+    elif n_clicks_lr is not None and n_clicks_lr % 2 == 1:
         # Change the style of button-2 to active when it is clicked an odd number of times
         return {
             'backgroundColor': 'rgba(0, 255, 0, 0.5)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '0%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
     else:
@@ -1228,40 +1301,41 @@ def update_button_style_linear(n_clicks_linear, n_clicks_nonlinear):
             'backgroundColor': 'rgba(0,0,0,0.3)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '7%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
 
 
+
 @app.callback(
-    Output('button_nonlinear', 'style'),
-    [Input('button_linear', 'n_clicks'), Input('button_nonlinear', 'n_clicks')]
+    Output('randomforest-button', 'style'),
+    [Input('linearregression-button', 'n_clicks'), Input('randomforest-button', 'n_clicks')]
 )
-def update_button_style_nonlinear(n_clicks_linear, n_clicks_nonlinear):
-    if n_clicks_linear is not None and n_clicks_linear % 2 == 1:
+def update_button_style_svm(n_clicks_lr, n_clicks_rf):
+    if n_clicks_lr is not None and n_clicks_lr % 2 == 1:
         return {
             'backgroundColor': 'rgba(211, 211, 211, 0.5)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '0%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
-    elif n_clicks_nonlinear is not None and n_clicks_nonlinear % 2 == 1:
+    elif n_clicks_rf is not None and n_clicks_rf % 2 == 1:
         # Change the style of button-2 to active when it is clicked an odd number of times
         return {
             'backgroundColor': 'rgba(0, 255, 0, 0.5)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '0%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
     else:
@@ -1270,10 +1344,94 @@ def update_button_style_nonlinear(n_clicks_linear, n_clicks_nonlinear):
             'backgroundColor': 'rgba(0,0,0,0.3)',
             'color': 'white',
             'text-align': 'center',
-            'margin-right': '10px',  # add a right margin to create a space between the buttons
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
             'border-radius': '7%',  # set the border radius to 50% to make the buttons round
             'height': '30px',  # set the height of the buttons
-            'width': '120px',  # set the width of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+
+
+@app.callback(
+    Output('svm-button', 'style'),
+    [Input('svm-button', 'n_clicks'), Input('rfclass-button', 'n_clicks')]
+)
+def update_button_style_svm(n_clicks_svm, n_clicks_rfclass):
+    if n_clicks_rfclass is not None and n_clicks_rfclass % 2 == 1:
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_svm is not None and n_clicks_svm % 2 == 1:
+        # Change the style of button-2 to active when it is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    else:
+        # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0,0,0,0.3)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+
+
+@app.callback(
+    Output('rfclass-button', 'style'),
+    [Input('svm-button', 'n_clicks'), Input('rfclass-button', 'n_clicks')]
+)
+def update_button_style_rfclass(n_clicks_svm, n_clicks_rfclass):
+    if n_clicks_svm is not None and n_clicks_svm % 2 == 1:
+        return {
+            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    elif n_clicks_rfclass is not None and n_clicks_rfclass % 2 == 1:
+        # Change the style of button-2 to active when it is clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
+            'font-size': '16px'  # set the font size of the button labels
+        }
+    else:
+        # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
+        return {
+            'backgroundColor': 'rgba(0,0,0,0.3)',
+            'color': 'white',
+            'text-align': 'center',
+            #'margin-right': '10px',  # add a right margin to create a space between the buttons
+            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+            'height': '30px',  # set the height of the buttons
+            'width': '200px',  # set the width of the buttons
             'font-size': '16px'  # set the font size of the button labels
         }
 
@@ -1448,21 +1606,23 @@ def toggle_dropdown_visibility_featimp_var(button_featimp_click, button_scatter_
         dash.dependencies.Output('dropdown_x_regression', 'value'),
     ],
     [
-        dash.dependencies.Input('button-regression', 'n_clicks'),
+        dash.dependencies.Input('linearregression-button', 'n_clicks'),
+        dash.dependencies.Input('randomforest-button', 'n_clicks'),
         dash.dependencies.Input('button-classification', 'n_clicks')
+        #dash.dependencies.Input('button-regression', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_x_var_regression(button_regression_click, button_classification_click):
+def toggle_dropdown_visibility_x_var_regression(lr_button, rf_button, button_classification_click):
 
     if (button_classification_click is None) or (button_classification_click % 2 == 0):
 
-        if button_regression_click is None:
+        if lr_button is None and rf_button is None:
             return [
                 {'display': 'none', 'color': 'black', 'textAlign': 'center'},
                 None
             ]
 
-        if button_regression_click is not None and button_regression_click % 2 == 1:
+        if (lr_button is not None or rf_button is not None) and (lr_button % 2 == 1 or rf_button % 2 == 1):
             # Make the dropdown visible when Button 1 is clicked an odd number of times
             return [
                 {'display': 'block', 'color': 'black', 'textAlign': 'center'},
@@ -1487,21 +1647,23 @@ def toggle_dropdown_visibility_x_var_regression(button_regression_click, button_
         dash.dependencies.Output('dropdown_y_regression', 'value'),
     ],
     [
-        dash.dependencies.Input('button-regression', 'n_clicks'),
+        dash.dependencies.Input('linearregression-button', 'n_clicks'),
+        dash.dependencies.Input('randomforest-button', 'n_clicks'),
         dash.dependencies.Input('button-classification', 'n_clicks')
+        #dash.dependencies.Input('button-regression', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_y_var_regression(button_regression_click, button_classification_click):
+def toggle_dropdown_visibility_y_var_regression(lr_button, rf_button, button_classification_click):
 
     if (button_classification_click is None) or (button_classification_click % 2 == 0):
 
-        if button_regression_click is None:
+        if lr_button is None and rf_button is None:
             return [
                 {'display': 'none', 'color': 'black', 'textAlign': 'center'},
                 None
             ]
 
-        if button_regression_click is not None and button_regression_click % 2 == 1:
+        if (lr_button is not None or rf_button is not None) and (lr_button % 2 == 1 or rf_button % 2 == 1):
             # Make the dropdown visible when Button 1 is clicked an odd number of times
             return [
                 {'display': 'block', 'color': 'black', 'textAlign': 'center'},
@@ -1528,20 +1690,21 @@ def toggle_dropdown_visibility_y_var_regression(button_regression_click, button_
     ],
     [
         dash.dependencies.Input('button-regression', 'n_clicks'),
-        dash.dependencies.Input('button-classification', 'n_clicks')
+        dash.dependencies.Input('svm-button', 'n_clicks'),
+        dash.dependencies.Input('rfclass-button', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_x_var_classification(button_regression_click, button_classification_click):
+def toggle_dropdown_visibility_x_var_classification(button_regression_click, svm_button, rfclass_button):
 
     if (button_regression_click is None) or (button_regression_click % 2 == 0):
 
-        if button_classification_click is None:
+        if svm_button is None and rfclass_button is None:
             return [
                 {'display': 'none', 'color': 'black', 'textAlign': 'center'},
                 None
             ]
 
-        if button_classification_click is not None and button_classification_click % 2 == 1:
+        if (svm_button is not None or rfclass_button is not None) and (svm_button % 2 == 1 or rfclass_button % 2 == 1):
             # Make the dropdown visible when Button 1 is clicked an odd number of times
             return [
                 {'display': 'block', 'color': 'black', 'textAlign': 'center'},
@@ -1567,20 +1730,21 @@ def toggle_dropdown_visibility_x_var_classification(button_regression_click, but
     ],
     [
         dash.dependencies.Input('button-regression', 'n_clicks'),
-        dash.dependencies.Input('button-classification', 'n_clicks')
+        dash.dependencies.Input('svm-button', 'n_clicks'),
+        dash.dependencies.Input('rfclass-button', 'n_clicks')
     ]
 )
-def toggle_dropdown_visibility_y_var_classification(button_regression_click, button_classification_click):
+def toggle_dropdown_visibility_y_var_classification(button_regression_click, svm_button, rfclass_button):
 
     if (button_regression_click is None) or (button_regression_click % 2 == 0):
 
-        if button_classification_click is None:
+        if svm_button is None and rfclass_button is None:
             return [
                 {'display': 'none', 'color': 'black', 'textAlign': 'center'},
                 None
             ]
 
-        if button_classification_click is not None and button_classification_click % 2 == 1:
+        if (svm_button is not None or rfclass_button is not None) and (svm_button % 2 == 1 or rfclass_button % 2 == 1):
             # Make the dropdown visible when Button 1 is clicked an odd number of times
             return [
                 {'display': 'block', 'color': 'black', 'textAlign': 'center'},
@@ -1597,7 +1761,6 @@ def toggle_dropdown_visibility_y_var_classification(button_regression_click, but
             {'display': 'none', 'color': 'black', 'textAlign': 'center'},
             None
         ]
-
 
 ##########Dynamic Charts for Feature Exploration Tab############
 
@@ -1881,6 +2044,103 @@ def update_warning_message(dropdown_x_value, dropdown_y_value):
         return ''
 
 
+##############testing nested buttons
+
+@app.callback(
+    Output("additional-buttons", "children"),
+    [Input("button-regression", "n_clicks"), Input("button-classification", "n_clicks"), Input("button-placeholder", "n_clicks")],
+)
+def render_additional_buttons(btn1_clicks, btn2_clicks, btn3_clicks):
+    ctx = dash.callback_context
+    if btn1_clicks is None and btn2_clicks is None and btn3_clicks is None:
+        return []
+    else:
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        if btn1_clicks % 2 == 1:
+            return [
+                dbc.Row(
+                    [
+                        html.Div([
+                        html.Button("Linear Regression Model", id="linearregression-button",
+                                    n_clicks=0,
+                                    n_clicks_timestamp=0,
+                                    style={
+                                        'backgroundColor': 'rgba(0,0,0,0.3)',
+                                        'color': 'white',
+                                        'text-align': 'center',
+                                        #'margin-right': '10px',
+                                        # add a right margin to create a space between the buttons
+                                        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+                                        'height': '30px',  # set the height of the buttons
+                                        'width': '200px',  # set the width of the buttons
+                                        'font-size': '16px'  # set the font size of the button labels
+                                    }
+                                    ),
+                        html.Button("Random Forest Model", id="randomforest-button",
+                                    n_clicks=0,
+                                    n_clicks_timestamp=0,
+                                    style={
+                                        'backgroundColor': 'rgba(0,0,0,0.3)',
+                                        'color': 'white',
+                                        'text-align': 'center',
+                                        #'margin-right': '10px',
+                                        # add a right margin to create a space between the buttons
+                                        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+                                        'height': '30px',  # set the height of the buttons
+                                        'width': '200px',  # set the width of the buttons
+                                        'font-size': '16px'  # set the font size of the button labels
+                                    }
+                                    )
+                            ],
+                            style={"display": "flex", "justify-content": "center"}, className="p-4"),
+                    ]
+                )
+            ]
+        elif btn2_clicks % 2 == 1:
+            return [
+                dbc.Row(
+                    [
+                        html.Div([
+                        html.Button("SVM Model", id="svm-button",
+                                    n_clicks=0,
+                                    n_clicks_timestamp=0,
+                                    style={
+                                        'backgroundColor': 'rgba(0,0,0,0.3)',
+                                        'color': 'white',
+                                        'text-align': 'center',
+                                        #'margin-right': '10px',
+                                        # add a right margin to create a space between the buttons
+                                        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+                                        'height': '30px',  # set the height of the buttons
+                                        'width': '200px',  # set the width of the buttons
+                                        'font-size': '16px'  # set the font size of the button labels
+                                    }
+                                    ),
+                        html.Button("Random Forest Model", id="rfclass-button",
+                                    n_clicks=0,
+                                    n_clicks_timestamp=0,
+                                    style={
+                                        'backgroundColor': 'rgba(0,0,0,0.3)',
+                                        'color': 'white',
+                                        'text-align': 'center',
+                                        #'margin-right': '10px',
+                                        # add a right margin to create a space between the buttons
+                                        'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+                                        'height': '30px',  # set the height of the buttons
+                                        'width': '200px',  # set the width of the buttons
+                                        'font-size': '16px'  # set the font size of the button labels
+                                    }
+                                    ),
+                        ],
+                            style={"display": "flex", "justify-content": "center"}, className="p-4")
+                    ]
+                )
+            ]
+        else:
+            return []
+
+
+
 ########Callbacks for all features in the App#########
 @app.callback(
     Output(component_id='scatter-plot', component_property='children'),
@@ -2102,13 +2362,13 @@ def update_featimp_plots(target_value, jsonified_cleaned_data, n_clicks):
 @app.callback(
     Output("regression-div", "children"),
     [Input("button-regression", "n_clicks"),
-     Input("button_linear", "n_clicks"),
-     Input("button_nonlinear", "n_clicks"),
+     Input("linearregression-button", "n_clicks"),
+     Input("randomforest-button", "n_clicks"),
      Input('intermediate-value', 'data')],
     [Input("dropdown_x_regression", "value"),
      Input("dropdown_y_regression", "value")]
 )
-def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_nonlinear, jsonified_cleaned_data, feature_columns, target_column):
+def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_rf, jsonified_cleaned_data, feature_columns, target_column):
     if n_clicks_regress is not None and n_clicks_linear % 2 == 1:
         if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
@@ -2221,7 +2481,7 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_nonlinea
 
             return dcc.Graph(id='regression-plot', figure=fig), f"R2 Score: {score}", table
 
-    elif n_clicks_regress is not None and n_clicks_nonlinear % 2 == 1:
+    elif n_clicks_regress is not None and n_clicks_rf % 2 == 1:
         if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
             df = pd.read_json(jsonified_cleaned_data, orient='split')
 
@@ -2341,45 +2601,26 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_nonlinea
 @app.callback(
     Output("classification-div", "children"),
     [Input("button-classification", "n_clicks"),
-     Input("button_linear", "n_clicks"),
-     Input("button_nonlinear", "n_clicks"),
+     Input("svm-button", "n_clicks"),
+     Input("rfclass-button", "n_clicks"),
      Input('intermediate-value', 'data')],
     [Input("dropdown_x_class", "value"),
      Input("dropdown_y_class", "value")]
 )
-def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlinear, jsonified_cleaned_data, feature_columns, target_column):
-    if n_clicks_class is not None and n_clicks_linear % 2 == 1:
+def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, jsonified_cleaned_data, feature_columns, target_column):
+    if n_clicks_class is not None and n_clicks_svm% 2 == 1:
         if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
             print("check")
             df = pd.read_json(jsonified_cleaned_data, orient='split')
-            #df.dropna(subset=[target_column], inplace=True)
-            #(df[target_column].unique())
 
-
-
-            #unique_values = df[target_column].unique()
-            #if set(unique_values) == {0, 1}:
-            #    # Convert the target column to a categorical column
-            #    df[target_column] = df[target_column].astype('category')
-            #else:
-            #    raise ValueError("Target column must contain only 0 and 1.")
-
-            # encode target variable if needed
-            #if df[target_column].dtype in ["float", "int", "bool"]:
-            #    return html.Div([
-            #        html.Center(html.H2(
-            #            'This target variable is NOT a categorical variable and therefore not appropriate to use for Classification.')),
-            #    ])
-            #else:
-            #    pass
 
             non_numeric_features = df[feature_columns].select_dtypes(exclude='number').columns
 
-##come back to this tomorrow - issue is having trouble accessing the encoded variables, and the selected variables minus the initial name of the encoded variables
+
 
             # Create an instance of the OneHotEncoder class
             encoder = OneHotEncoder()
-            print(feature_columns)
+
             selected_features = feature_columns
             new_column_names = []
             dropped_columns = []
@@ -2404,191 +2645,108 @@ def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlin
                 if column in dropped_columns:
                     combined_columns.remove(column)
 
-            #X = df[all_features]
-            print(selected_features)
-            #print(new_column_names)
-            #print(dropped_columns)
-            print(combined_columns)
 
-            print("made it after encoding")
-
-            #df = df[feature_columns]
-            #print(df.columns)
-
-
-            #preprocessing step 1 - impute missing values
             df = impute_and_remove(df)
-            #print("df after imputation". df.columns)
 
 
             df = standardize_inputs_class(df, target_column)
 
-            print("made it after standardization")
-            #print(df.columns)
-
-
 
 
             X = df[combined_columns] #this already has the chosen columns just named after the OHE
-            print(X)
             y = df[target_column]
 
+
+            #encode target vars
             le = LabelEncoder()
             y_encoded = le.fit_transform(y)
-            print(y_encoded)
 
+            #split data
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
-            #print(X_test)
 
-            if len(set(y_encoded)) == 2:
+            # Model complexity
+            neighboors = np.arange(1, 30)
+            train_accuracy = []
+            test_accuracy = []
 
-                model = LogisticRegression()
-                print("model is running")
-                model.fit(X_train, y_train)
-                probs = model.predict_proba(X_test)[:, 1]
-                print(probs)
-                #print(X_test.iloc[:, 0])
-                #print(len(y_test))
+            # Loop over different values of k
+            for i, k in enumerate(neighboors):
+                # k from 1 to 30(exclude)
+                knn = KNeighborsClassifier(n_neighbors=k)
+                # fit with knn
+                knn.fit(X_train, y_train)
+                train_accuracy.append(knn.score(X_train, y_train))  # train accuracy
+                test_accuracy.append(knn.score(X_test, y_test))
 
+            max_test_accuracy = np.max(test_accuracy)
+            best_k = neighboors[np.argmax(test_accuracy)]
+            print(best_k)
 
-                predictions = model.predict(X_test)
-                print(predictions)
+            best_knn = KNeighborsClassifier(n_neighbors=best_k)
+            best_knn.fit(X_train, y_train)
 
-                # Create a scatter plot of the data, coloring the points by their predicted labels
-                #fig = px.scatter(x=X_test.iloc[:, 0], y=X_test.iloc[:, 1], color=predictions)
-
-                def sigmoid(x):
-                    return 1 / (1 + np.exp(-x))
-
-                # Calculate the output of the sigmoid function for each predicted probability
-                output = sigmoid(probs)
-
-                # Create a trace for the sigmoid function
-                #trace = go.Scatter(x=probs, y=output, mode='lines', name='Sigmoid function')
-
-                predictions_unencoded = le.inverse_transform(predictions)
-
-                class_labels = le.classes_
-
-                # Create a trace for the true class labels
-                pred_values = list(set(predictions))
+            y_pred = best_knn.predict(X_test)
+            #print(predictions)
 
 
-                # Generate a list of colors for each unique value of y
-                colors = ['red', 'blue', 'green', 'yellow', 'black']
-                color_map = {pred_values[i]: colors[i] for i in range(len(pred_values))}
 
-                # Map the colors to the markers in the scatter plot
-                marker_colors = [color_map[pred] for pred in predictions]
 
-                fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_test, probs)
+            trace1 = go.Scatter(
+                x=neighboors,
+                y=train_accuracy,
+                mode="lines",
+                name="train_accuracy",
+                marker=dict(color='rgb(255, 0, 0)'),
+                text="train_accuracy")
+            # Creating trace2
+            trace2 = go.Scatter(
+                x=neighboors,
+                y=test_accuracy,
+                mode="lines+markers",
+                name="test_accuracy",
+                marker=dict(color='rgb(104,111,254)'),
+                text="test_accuracy")
+            data = [trace1, trace2]
+            layout = dict(
+                title='K Value vs Accuracy',
+                xaxis=dict(title='Number of Neighbors', ticklen=10, zeroline=False, showgrid=False,
+                           tickfont=dict(color='white'), showline=False),
+                yaxis=dict(linecolor='white', tickcolor='white', showgrid=False, tickfont=dict(color='white'),
+                           zeroline=False),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0, 0, 0, 0)',
+                font=dict(color='white')
+            )
+            fig = dict(data=data, layout=layout)
 
-                # Create a trace for the TPR and FPR
-                roc_curve = go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC curve')
 
-                # Create a trace for the 50% threshold line
-                threshold_line = go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='50% threshold',
-                                            line=dict(color='red', dash='dash'))
 
-                # Create a figure with the ROC curve trace and the 50% threshold line trace
-                fig = go.Figure(data=[roc_curve, threshold_line])
+            acc = "Best accuracy is {} with K = {}".format(np.max(test_accuracy), 1 + test_accuracy.index(np.max(test_accuracy)))
 
-                fig.update_xaxes(showgrid=False)
-                fig.update_yaxes(showgrid=False)
-                fig.update_layout({
-                    'plot_bgcolor': 'rgba(0, 0, 0, 0)',
-                    'paper_bgcolor': 'rgba(0, 0, 0, 0)',
-                })
-                fig.update_layout(
-                    title={
-                        'y': 0.9,
-                        'x': 0.5,
-                        'xanchor': 'center',
-                        'yanchor': 'top'})
-                fig.update_layout(title_font_color="white",
-                                  font_color="white")
 
-                # Add a title and axis labels
-                fig.update_layout(title='ROC curve', xaxis_title='False Positive Rate',
-                                  yaxis_title='True Positive Rate')
 
-                accuracy = accuracy_score(y_test, predictions)
-                print('Accuracy:', accuracy)
+            #accuracy = accuracy_score(y_test, predictions)
+            #print('Accuracy:', accuracy)
+            print("check:", y_test)
+            var = 'var'
+            print(var)
+            print(len(y_pred))
+            print(len(y_test))
+            results = pd.DataFrame(columns=["Actual", "Predicted"])
+            results["Actual"] = y_test
+            results["Predicted"] = y_pred
+            print(results)
 
-            elif len(set(y_encoded)) > 2:
 
-                #model = LogisticRegression(multi_class='ovr', solver='liblinear')
-                #model = LogisticRegression()
-                model = RandomForestClassifier(n_estimators=100)
-                print("model is running")
-                model.fit(X_train, y_train)
-                #probs = model.predict_proba(X_test)[:, 1]
-                #print(probs)
-                # print(X_test.iloc[:, 0])
-                # print(len(y_test))
+            test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)), columns=list(X_test.columns) + ["target"])
 
-                predictions = model.predict(X_test)
-                print(predictions)
+            # Add a new column with the predicted values
+            test_df["predictions"] = y_pred
 
-                # Create a scatter plot of the data, coloring the points by their predicted labels
-                # fig = px.scatter(x=X_test.iloc[:, 0], y=X_test.iloc[:, 1], color=predictions)
-
-                def sigmoid(x):
-                    return 1 / (1 + np.exp(-x))
-
-                # Calculate the output of the sigmoid function for each predicted probability
-                #output = sigmoid(probs)
-
-                # Create a trace for the sigmoid function
-                # trace = go.Scatter(x=probs, y=output, mode='lines', name='Sigmoid function')
-
-                predictions_unencoded = le.inverse_transform(predictions)
-
-                class_labels = le.classes_
-
-                # Create a trace for the true class labels
-                pred_values = list(set(predictions))
-
-                # Calculate the confusion matrix
-                confusion_matrix = sklearn.metrics.confusion_matrix(y_test, predictions)
-
-                # Create a list of lists with the confusion matrix values
-                matrix_values = [[str(value) for value in row] for row in confusion_matrix]
-
-                # Create a table trace
-                trace = go.Table(
-                    header=dict(values=class_labels),
-                    cells=dict(values=matrix_values)
-                )
-
-                # Calculate the number of correct and incorrect classifications
-                num_correct = sum([confusion_matrix[i][i] for i in range(len(class_labels))])
-                num_incorrect = sum([sum(row) - row[i] for i, row in enumerate(confusion_matrix)])
-
-                # Create a list of annotations for the labels
-                annotations = [
-                    dict(xref='paper', yref='paper', x=-0.2, y=-0.1, text=f'Correct: {num_correct}', showarrow=False),
-                    dict(xref='paper', yref='paper', x=-0.2, y=-0.2, text=f'Incorrect: {num_incorrect}',
-                         showarrow=False)
-                ]
-
-                # Create a figure with the table trace and annotations
-                fig = go.Figure(data=[trace], layout=go.Layout(annotations=annotations))
-
-                # Customize the appearance of the plot
-                fig.update_layout(title='Confusion Matrix', xaxis_title='Predicted Label', yaxis_title='True Label')
-
-                accuracy = accuracy_score(y_test, predictions)
-                print('Accuracy:', accuracy)
-
-            results = pd.DataFrame({
-                "Actual": y_test,
-                "Predicted": predictions
-            })
             table = dash_table.DataTable(
                 id="table",
-                columns=[{"name": col, "id": col} for col in results.columns],
-                data=results.to_dict("records"),
+                columns=[{"name": col, "id": col} for col in test_df.columns],
+                data=test_df.to_dict("records"),
                 style_header={'backgroundColor': 'rgba(0,0,0,0)',
                               'color': 'white',
                               'fontWeight': 'bold',
@@ -2596,7 +2754,7 @@ def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlin
                 style_table={'overflowX': 'scroll'},
                 style_cell={'minWidth': '180px', 'width': '180px',
                             'maxWidth': '180px', 'whiteSpace': 'normal',
-                            'backgroundColor': 'rgba(0,0,0,0)',
+                           'backgroundColor': 'rgba(0,0,0,0)',
                             'color': 'white'},
                 style_data_conditional=[
                     {
@@ -2604,9 +2762,9 @@ def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlin
                         'if': {'column_id': 'all'},
                         'color': 'white'
                     },
-                    {
+                   {
                         # Set the font color for cells in the 'Name' column to white
-                        # when the row is highlighted
+                       # when the row is highlighted
                         'if': {'column_id': 'Name', 'row_index': 'odd'},
                         'color': 'black'
                     }
@@ -2619,10 +2777,237 @@ def update_classification_graph(n_clicks_class, n_clicks_linear, n_clicks_nonlin
             )
 
 
-            return dcc.Graph(id='classification-plot', figure=fig), "placeholder", table
+            return dcc.Graph(id='classification-plot', figure=fig), acc, table
 
-    else:
-        return f'''Need to create non-liner classifier'''
+
+    elif n_clicks_svm is not None and n_clicks_rfclass % 2 == 1:
+
+        if (jsonified_cleaned_data is not None) and (target_column is not None) and (feature_columns is not None):
+            df = pd.read_json(jsonified_cleaned_data, orient='split')
+
+            non_numeric_features = df[feature_columns].select_dtypes(exclude='number').columns
+
+            # Create an instance of the OneHotEncoder class
+            encoder = OneHotEncoder()
+
+            selected_features = feature_columns
+            new_column_names = []
+            dropped_columns = []
+
+            # Encode or drop the non-numeric features based on the degree of cardinality - if a categorical feature has more than 4 unique classes then drop the variable as it may add too many dimensions
+            for feature in non_numeric_features:
+                if df[feature].nunique() < 4:
+                    # selected_features.append(feature)
+                    one_hot = encoder.fit_transform(df[[feature]])
+                    # Generate a list of names for the one-hot encoded columns based on the unique values of the feature
+                    column_names = [f"{feature}_{value}" for value in df[feature].unique()]
+                    new_column_names.extend(column_names)
+                    dropped_columns.append(feature)
+                    one_hot_df = pd.DataFrame(one_hot.toarray(), columns=column_names)
+                    df = pd.concat([df, one_hot_df], axis=1)
+                    df = df.drop(columns=[feature])
+                else:
+                    df = df.drop(columns=[feature])
+
+            combined_columns = selected_features + new_column_names
+            for column in combined_columns:
+                if column in dropped_columns:
+                    combined_columns.remove(column)
+
+            df = impute_and_remove(df)
+
+            df = standardize_inputs_class(df, target_column)
+
+            X = df[combined_columns]  # this already has the chosen columns just named after the OHE
+            y = df[target_column]
+
+
+            # encode target vars
+            le = LabelEncoder()
+            y_encoded = le.fit_transform(y)
+
+            # split data
+            X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
+
+
+            model = RandomForestClassifier()
+
+
+            ####grid search CV
+
+            #param_grid = {
+            #    "n_estimators": [10, 50, 100],
+            #    "max_depth": [None, 5, 10],
+            #    "min_samples_split": [2, 5, 10],
+            #    "min_samples_leaf": [1, 2, 4]
+            #}
+
+            # Define the scoring metric
+            #scoring = "accuracy"
+
+            # Create the grid search object
+            #grid_search = GridSearchCV(model, param_grid, scoring=scoring)
+
+            # Fit the grid search object to the training data
+            #grid_search.fit(X_train, y_train)
+
+            # Print the best hyperparameters
+            #print("Best hyperparameters:", grid_search.best_params_)
+
+            # Get the best model
+            #best_model = grid_search.best_estimator_
+
+            #y_pred = best_model.predict(X_test)
+
+            #probs = best_model.predict_proba(X_test)
+
+            # Evaluate the best model on the test set
+            #accuracy = best_model.score(X_test, y_test)
+
+            ####grid search CV
+
+
+            model.fit(X_train, y_train)
+
+            y_pred = model.predict(X_test)
+
+            probs = model.predict_proba(X_test)[:, 1]
+
+            accuracy = accuracy_score(y_test, y_pred)
+
+            #colors = ['red', 'blue', 'green', 'yellow', 'black']
+            #color_map = {y_pred[i]: colors[i] for i in range(len(y_pred))}
+
+            # Map the colors to the markers in the scatter plot
+            #marker_colors = [color_map[pred] for pred in y_pred]
+
+            fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_test, probs)
+
+            # Create a trace for the TPR and FPR
+            roc_curve = go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC curve')
+
+            # Create a trace for the 50% threshold line
+            threshold_line = go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='50% threshold',
+                                        line=dict(color='red', dash='dash'))
+
+            # Create a figure with the ROC curve trace and the 50% threshold line trace
+            fig = go.Figure(data=[roc_curve, threshold_line])
+
+            fig.update_xaxes(showgrid=False)
+            fig.update_yaxes(showgrid=False)
+            fig.update_layout({
+                'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+                'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+            })
+            fig.update_layout(
+                title={
+                    'y': 0.9,
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top'})
+            fig.update_layout(title_font_color="white",
+                              font_color="white")
+
+            # Add a title and axis labels
+            fig.update_layout(title='ROC curve', xaxis_title='False Positive Rate',
+                              yaxis_title='True Positive Rate')
+
+            #accuracy = accuracy_score(y_test, y_pred)
+            #print(accuracy)
+
+            # Calculate the F1 score
+            #f1 = f1_score(y_test, y_pred)
+            #print(f1)
+            # Calculate the recall
+            #recall = recall_score(y_test, y_pred)
+            #print(recall)
+
+            # Calculate the classification report
+            #report = classification_report(y_test, y_pred, output_dict=True)
+
+            ###testing
+
+            # Calculate the precision, recall, and f1-score for each class
+            precision, recall, f1, support = precision_recall_fscore_support(y_test, y_pred)
+
+            # Calculate the overall accuracy
+            accuracy = accuracy_score(y_test, y_pred)
+            print(accuracy)
+
+            # Create a dictionary to hold the results
+            results = {}
+            classes = np.unique(y_test)
+
+            # Loop through the classes and add the results to the dictionary
+            #for class_index, class_name in enumerate(classes):
+            #    results[class_name] = {
+            #        "precision": precision[class_index],
+            #        "recall": recall[class_index],
+            #        "f1-score": f1[class_index],
+            #        "support": support[class_index]
+            #    }
+
+            #print(results)
+
+            # Add the overall accuracy to the results
+            #results["accuracy"] = accuracy
+
+            # Convert the results to a list of dictionaries
+            #report_data = [{"Class": class_name, "Precision": metrics["precision"], "Recall": metrics["recall"],
+            #                "F1-score": metrics["f1-score"], "Support": metrics["support"]} for class_name, metrics in
+            #               results.items()]
+
+            #print(report_data)
+
+
+
+            test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)), columns=list(X_test.columns) + ["target"])
+
+
+            # Add a new column with the predicted values
+            test_df["predictions"] = y_pred
+
+            table = dash_table.DataTable(
+                id="table",
+                columns=[{"name": col, "id": col} for col in test_df.columns],
+                data=test_df.to_dict("records"),
+                style_header={'backgroundColor': 'rgba(0,0,0,0)',
+                              'color': 'white',
+                              'fontWeight': 'bold',
+                              'textAlign': 'center', },
+                style_table={'overflowX': 'scroll'},
+                style_cell={'minWidth': '180px', 'width': '180px',
+                            'maxWidth': '180px', 'whiteSpace': 'normal',
+                           'backgroundColor': 'rgba(0,0,0,0)',
+                            'color': 'white'},
+                style_data_conditional=[
+                    {
+                        # Set the font color for all cells to black
+                        'if': {'column_id': 'all'},
+                        'color': 'white'
+                    },
+                   {
+                        # Set the font color for cells in the 'Name' column to white
+                       # when the row is highlighted
+                        'if': {'column_id': 'Name', 'row_index': 'odd'},
+                        'color': 'black'
+                    }
+                ],
+                editable=False,
+                page_size=5,
+                sort_mode='multi',
+                sort_action='native',
+                filter_action='native',
+            )
+
+
+            return dcc.Graph(id='classification-plot', figure=fig), f'''Accuracy: {accuracy}''', table
+            #return fig, table
+
+
+
+
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)
