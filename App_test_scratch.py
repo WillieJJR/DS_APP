@@ -591,14 +591,17 @@ def standardize_inputs(df, target_column):
     return df_scaled
 
 
-def standardize_inputs_class(df, target_column):
+def standardize_inputs_class(df, target_column, scale=True):
     # Make a copy of the DataFrame
     df_scaled = df.copy()
 
     # Standardize the numeric columns
     scaler = StandardScaler()
     numeric_columns = df_scaled.select_dtypes(include=["int", "float"]).columns
-    df_scaled[numeric_columns] = scaler.fit_transform(df_scaled[numeric_columns])
+    if scale:
+        df_scaled[numeric_columns] = scaler.fit_transform(df_scaled[numeric_columns])
+    else:
+        df_scaled[numeric_columns] = scaler.inverse_transform(df_scaled[numeric_columns])
 
     return df_scaled
 
@@ -2770,12 +2773,14 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             X = df[combined_columns]  # this already has the chosen columns just named after the OHE
             y = df[target_column]
 
+
             # encode target vars
             le = LabelEncoder()
             y_encoded = le.fit_transform(y)
 
             # split data
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
+
 
             model = RandomForestClassifier()
 
@@ -2906,16 +2911,10 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
 
             #print(report_data)
 
-            ###testing
 
-
-
-            # Print the classification report
-            #print(report)
-
-            #print(f'''Accuracy: {accuracy}\nRecall: {recall}\nF1 Score: {f1_score}''')
 
             test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)), columns=list(X_test.columns) + ["target"])
+
 
             # Add a new column with the predicted values
             test_df["predictions"] = y_pred
