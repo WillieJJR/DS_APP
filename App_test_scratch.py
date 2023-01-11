@@ -279,7 +279,7 @@ popovers = html.Div(
             }
         ),
 
-        dbc.Popover(
+        dbc.Popover( children =
             dbc.PopoverBody("My `target` is `popover-target`."),
             target='button-regression-help',
             trigger="hover",
@@ -481,7 +481,27 @@ app.layout = html.Div([
                     )
                 ], className="row"),
 
-                dbc.Row(popovers),
+                #dbc.Row(popovers),
+
+                html.Div([
+                html.Button(
+                            '?',
+                            id='button-regression-help',
+                            n_clicks=0,
+                            n_clicks_timestamp=0,
+                            style={
+                                'backgroundColor': 'rgba(0,0,0,0.3)',
+                                'color': 'red',
+                                'text-align': 'center',
+                                'margin-right': '10px',  # add a right margin to create a space between the buttons
+                                'border-radius': '70%',  # set the border radius to 50% to make the buttons round
+                                'height': '30px',  # set the height of the buttons
+                                'width': '30px',  # set the width of the buttons
+                                'font-size': '16px'  # set the font size of the button labels
+                            }
+                        )
+                    ], style={'display': 'flex', 'margin': 'auto', 'justify-content': 'right'}),
+                html.Div(id='popover-target'),
                 dbc.Row([button_predictive_analytics_container]),
                 html.Div(id="additional-buttons"),
                 dbc.Row([
@@ -719,6 +739,43 @@ def update_store_output(contents, filename ):
     else:
         return dash.no_update
 
+
+###testing
+
+@app.callback(
+    Output("popover-target", "children"),
+    [Input("button-regression", "n_clicks"),
+     Input("button-classification", "n_clicks")]
+)
+def show_popover(n_clicks_regress, n_clicks_class):
+    if n_clicks_regress % 2 == 1:
+        return dbc.Popover(
+            dbc.PopoverBody(dcc.Markdown("""
+            ### Linear Regression
+            * A statistical method used to model the linear relationship between a dependent variable and one or more independent variables. It is used to predict the value of a dependent variable based on the values of the independent variables.
+            
+            ### R2 Score
+            * A statistical measure that represents the proportion of the variance in the dependent variable that is predictable from the independent variable(s) It ranges from 0 to 1, with a higher value indicating a stronger relationship between the variables.
+            
+            ### Random Forest Regressor
+            * An ensemble machine learning model, built upon decision trees, that is used to perform regression tasks. The model makes predictions by averaging the results of many decision trees, where each tree is trained on a random subset of the data.
+            """)),
+            target='button-regression-help',
+            trigger="hover"
+        )
+    elif n_clicks_class % 2 == 1:
+        return dbc.Popover(
+            dbc.PopoverBody(
+                dcc.Markdown("""The Classification option gives you access to : 
+                * Support Vector Machine (SVM) 
+                * Random Forest Classification""")),
+            target='button-regression-help',
+            trigger="hover"
+        )
+    else:
+        return html.Div()
+
+###testing
 
 
 
