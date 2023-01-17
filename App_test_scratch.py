@@ -20,6 +20,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import GridSearchCV
 import sklearn.metrics
+from sklearn.metrics import precision_recall_curve
 #from sklearn.metrics import accuracy_score
 from sklearn.metrics import accuracy_score, f1_score, recall_score
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
@@ -765,10 +766,16 @@ def show_popover(n_clicks_regress, n_clicks_class):
         )
     elif n_clicks_class % 2 == 1:
         return dbc.Popover(
-            dbc.PopoverBody(
-                dcc.Markdown("""The Classification option gives you access to : 
-                * Support Vector Machine (SVM) 
-                * Random Forest Classification""")),
+            dbc.PopoverBody(dcc.Markdown("""
+            ### Support Vector Machine (SVM)
+            * Classification algorithm that finds a decision boundary (line or hyperplane) that separates different classes of data with the largest margin.
+            
+            ### ROC Curve
+            * Graphical representation of the performance of a binary classifier. It plots the true positive rate (TPR) against the false positive rate (FPR) at different classification thresholds.
+            
+            ### Random Forest Classifier
+            * An ensemble machine learning model, built upon decision trees, that is used to perform classification tasks. The model makes predictions by averaging the results of many decision trees, where each tree is trained on a random subset of the data.
+            """)),
             target='button-regression-help',
             trigger="hover"
         )
@@ -2938,127 +2945,157 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             # Map the colors to the markers in the scatter plot
             #marker_colors = [color_map[pred] for pred in y_pred]
 
-            fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_test, probs)
+            n_classes = df[target_column].nunique()
 
-            # Create a trace for the TPR and FPR
-            roc_curve = go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC curve')
+            if n_classes <= 2:
 
-            # Create a trace for the 50% threshold line
-            threshold_line = go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='50% threshold',
-                                        line=dict(color='red', dash='dash'))
+                fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_test, probs)
 
-            # Create a figure with the ROC curve trace and the 50% threshold line trace
-            fig = go.Figure(data=[roc_curve, threshold_line])
+                # Create a trace for the TPR and FPR
+                roc_curve = go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC curve')
 
-            fig.update_xaxes(showgrid=False)
-            fig.update_yaxes(showgrid=False)
-            fig.update_layout({
-                'plot_bgcolor': 'rgba(0, 0, 0, 0)',
-                'paper_bgcolor': 'rgba(0, 0, 0, 0)',
-            })
-            fig.update_layout(
-                title={
-                    'y': 0.9,
-                    'x': 0.5,
-                    'xanchor': 'center',
-                    'yanchor': 'top'})
-            fig.update_layout(title_font_color="white",
-                              font_color="white")
+                # Create a trace for the 50% threshold line
+                threshold_line = go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='50% threshold',
+                                            line=dict(color='red', dash='dash'))
 
-            # Add a title and axis labels
-            fig.update_layout(title='ROC curve', xaxis_title='False Positive Rate',
-                              yaxis_title='True Positive Rate')
+                # Create a figure with the ROC curve trace and the 50% threshold line trace
+                fig = go.Figure(data=[roc_curve, threshold_line])
 
-            #accuracy = accuracy_score(y_test, y_pred)
-            #print(accuracy)
+                fig.update_xaxes(showgrid=False)
+                fig.update_yaxes(showgrid=False)
+                fig.update_layout({
+                    'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+                    'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+                })
+                fig.update_layout(
+                    title={
+                        'y': 0.9,
+                        'x': 0.5,
+                        'xanchor': 'center',
+                        'yanchor': 'top'})
+                fig.update_layout(title_font_color="white",
+                                  font_color="white")
 
-            # Calculate the F1 score
-            #f1 = f1_score(y_test, y_pred)
-            #print(f1)
-            # Calculate the recall
-            #recall = recall_score(y_test, y_pred)
-            #print(recall)
+                # Add a title and axis labels
+                fig.update_layout(title='ROC curve', xaxis_title='False Positive Rate',
+                                  yaxis_title='True Positive Rate')
 
-            # Calculate the classification report
-            #report = classification_report(y_test, y_pred, output_dict=True)
+                #accuracy = accuracy_score(y_test, y_pred)
+                #print(accuracy)
 
-            ###testing
+                # Calculate the F1 score
+                #f1 = f1_score(y_test, y_pred)
+                #print(f1)
+                # Calculate the recall
+                #recall = recall_score(y_test, y_pred)
+                #print(recall)
 
-            # Calculate the precision, recall, and f1-score for each class
-            precision, recall, f1, support = precision_recall_fscore_support(y_test, y_pred)
+                # Calculate the classification report
+                #report = classification_report(y_test, y_pred, output_dict=True)
 
-            # Calculate the overall accuracy
-            accuracy = accuracy_score(y_test, y_pred)
-            print(accuracy)
+                ###testing
 
-            # Create a dictionary to hold the results
-            results = {}
-            classes = np.unique(y_test)
+                # Calculate the precision, recall, and f1-score for each class
+                precision, recall, f1, support = precision_recall_fscore_support(y_test, y_pred)
 
-            # Loop through the classes and add the results to the dictionary
-            #for class_index, class_name in enumerate(classes):
-            #    results[class_name] = {
-            #        "precision": precision[class_index],
-            #        "recall": recall[class_index],
-            #        "f1-score": f1[class_index],
-            #        "support": support[class_index]
-            #    }
+                # Calculate the overall accuracy
+                accuracy = accuracy_score(y_test, y_pred)
+                print(accuracy)
 
-            #print(results)
+                # Create a dictionary to hold the results
+                results = {}
+                classes = np.unique(y_test)
 
-            # Add the overall accuracy to the results
-            #results["accuracy"] = accuracy
+                # Loop through the classes and add the results to the dictionary
+                #for class_index, class_name in enumerate(classes):
+                #    results[class_name] = {
+                #        "precision": precision[class_index],
+                #        "recall": recall[class_index],
+                #        "f1-score": f1[class_index],
+                #        "support": support[class_index]
+                #    }
 
-            # Convert the results to a list of dictionaries
-            #report_data = [{"Class": class_name, "Precision": metrics["precision"], "Recall": metrics["recall"],
-            #                "F1-score": metrics["f1-score"], "Support": metrics["support"]} for class_name, metrics in
-            #               results.items()]
+                #print(results)
 
-            #print(report_data)
+                # Add the overall accuracy to the results
+                #results["accuracy"] = accuracy
 
+                # Convert the results to a list of dictionaries
+                #report_data = [{"Class": class_name, "Precision": metrics["precision"], "Recall": metrics["recall"],
+                #                "F1-score": metrics["f1-score"], "Support": metrics["support"]} for class_name, metrics in
+                #               results.items()]
 
-
-            test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)), columns=list(X_test.columns) + ["target"])
-
-
-            # Add a new column with the predicted values
-            test_df["predictions"] = y_pred
-
-            table = dash_table.DataTable(
-                id="table",
-                columns=[{"name": col, "id": col} for col in test_df.columns],
-                data=test_df.to_dict("records"),
-                style_header={'backgroundColor': 'rgba(0,0,0,0)',
-                              'color': 'white',
-                              'fontWeight': 'bold',
-                              'textAlign': 'center', },
-                style_table={'overflowX': 'scroll'},
-                style_cell={'minWidth': '180px', 'width': '180px',
-                            'maxWidth': '180px', 'whiteSpace': 'normal',
-                           'backgroundColor': 'rgba(0,0,0,0)',
-                            'color': 'white'},
-                style_data_conditional=[
-                    {
-                        # Set the font color for all cells to black
-                        'if': {'column_id': 'all'},
-                        'color': 'white'
-                    },
-                   {
-                        # Set the font color for cells in the 'Name' column to white
-                       # when the row is highlighted
-                        'if': {'column_id': 'Name', 'row_index': 'odd'},
-                        'color': 'black'
-                    }
-                ],
-                editable=False,
-                page_size=5,
-                sort_mode='multi',
-                sort_action='native',
-                filter_action='native',
-            )
+                #print(report_data)
 
 
-            return dcc.Graph(id='classification-plot', figure=fig), f'''Accuracy: {accuracy}''', table
+
+                test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)), columns=list(X_test.columns) + ["target"])
+
+
+                # Add a new column with the predicted values
+                test_df["predictions"] = y_pred
+
+                table = dash_table.DataTable(
+                    id="table",
+                    columns=[{"name": col, "id": col} for col in test_df.columns],
+                    data=test_df.to_dict("records"),
+                    style_header={'backgroundColor': 'rgba(0,0,0,0)',
+                                  'color': 'white',
+                                  'fontWeight': 'bold',
+                                  'textAlign': 'center', },
+                    style_table={'overflowX': 'scroll'},
+                    style_cell={'minWidth': '180px', 'width': '180px',
+                                'maxWidth': '180px', 'whiteSpace': 'normal',
+                               'backgroundColor': 'rgba(0,0,0,0)',
+                                'color': 'white'},
+                    style_data_conditional=[
+                        {
+                            # Set the font color for all cells to black
+                            'if': {'column_id': 'all'},
+                            'color': 'white'
+                        },
+                       {
+                            # Set the font color for cells in the 'Name' column to white
+                           # when the row is highlighted
+                            'if': {'column_id': 'Name', 'row_index': 'odd'},
+                            'color': 'black'
+                        }
+                    ],
+                    editable=False,
+                    page_size=5,
+                    sort_mode='multi',
+                    sort_action='native',
+                    filter_action='native',
+                )
+
+
+                return dcc.Graph(id='classification-plot', figure=fig), f'''Accuracy: {accuracy}''', table
+
+            else:
+
+                fpr = dict()
+                tpr = dict()
+                roc_auc = dict()
+                for i in range(n_classes):
+                    #fpr[i], tpr[i], _ = sklearn.metrics.roc_curve(y_test[:, i], probs[:, i])
+                    fpr[i], tpr[i], _ = sklearn.metrics.roc_curve(y_test[:, i], probs[:, i])
+                    roc_auc[i] = sklearn.metrics.auc(fpr[i], tpr[i])
+
+                # Create a scatter plot with multiple lines, one for each class
+                fig = go.Figure()
+                for i in range(n_classes):
+                    fig.add_trace(go.Scatter(x=fpr[i], y=tpr[i], mode='lines',
+                                             name='ROC curve of class {} (AUC = {:0.2f})'.format(i, roc_auc[i])))
+
+                # Add the diagonal line y=x for reference
+                fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', line=dict(color='gray', dash='dash'),
+                                         name='Random guessing'))
+
+                # Set the x and y axis labels and the title
+                fig.update_layout(xaxis_title='False Positive Rate', yaxis_title='True Positive Rate',
+                                  title='ROC curves for multiclass classification')
+
+                return dcc.Graph(id='classification-plot', figure=fig)
             #return fig, table
 
 
