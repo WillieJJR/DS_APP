@@ -24,6 +24,7 @@ from sklearn.metrics import precision_recall_curve
 #from sklearn.metrics import accuracy_score
 from sklearn.metrics import accuracy_score, f1_score, recall_score
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
+from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from scipy.stats import spearmanr
 import plotly.graph_objects as go
@@ -3073,27 +3074,47 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
 
             else:
 
-                fpr = dict()
-                tpr = dict()
-                roc_auc = dict()
-                for i in range(n_classes):
-                    #fpr[i], tpr[i], _ = sklearn.metrics.roc_curve(y_test[:, i], probs[:, i])
-                    fpr[i], tpr[i], _ = sklearn.metrics.roc_curve(y_test[:, i], probs[:, i])
-                    roc_auc[i] = sklearn.metrics.auc(fpr[i], tpr[i])
+                #fpr = dict()
+                #tpr = dict()
+                #roc_auc = dict()
+                #for i in range(n_classes):
+                #    #fpr[i], tpr[i], _ = sklearn.metrics.roc_curve(y_test[:, i], probs[:, i])
+                #    fpr[i], tpr[i], _ = sklearn.metrics.roc_curve(y_test[:, i], probs[:, i])
+                #    roc_auc[i] = sklearn.metrics.auc(fpr[i], tpr[i])
 
                 # Create a scatter plot with multiple lines, one for each class
-                fig = go.Figure()
-                for i in range(n_classes):
-                    fig.add_trace(go.Scatter(x=fpr[i], y=tpr[i], mode='lines',
-                                             name='ROC curve of class {} (AUC = {:0.2f})'.format(i, roc_auc[i])))
+                #fig = go.Figure()
+                #for i in range(n_classes):
+                #    fig.add_trace(go.Scatter(x=fpr[i], y=tpr[i], mode='lines',
+                #                             name='ROC curve of class {} (AUC = {:0.2f})'.format(i, roc_auc[i])))
 
                 # Add the diagonal line y=x for reference
-                fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', line=dict(color='gray', dash='dash'),
-                                         name='Random guessing'))
+                #fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', line=dict(color='gray', dash='dash'),
+                #                         name='Random guessing'))
 
                 # Set the x and y axis labels and the title
-                fig.update_layout(xaxis_title='False Positive Rate', yaxis_title='True Positive Rate',
-                                  title='ROC curves for multiclass classification')
+                #fig.update_layout(xaxis_title='False Positive Rate', yaxis_title='True Positive Rate',
+                #                  title='ROC curves for multiclass classification')
+
+                confusion_matrix = sklearn.metrics.confusion_matrix(y_test, y_pred)
+                print(confusion_matrix)
+
+                unique_classes = np.unique(np.asarray(y_test))
+                print(unique_classes)
+
+                # Create the heatmap trace
+                trace = go.Heatmap(z=confusion_matrix, x=unique_classes,
+                                   y=unique_classes, opacity = 0.3,
+                                   colorscale=[[0, 'blue'], [1, 'blue']], text=confusion_matrix.astype(int), texttemplate='%{text:.0f}')
+
+                # Create the figure
+                fig = go.Figure(data=[trace])
+
+                # Update the layout
+                fig.update_layout(title='Confusion Matrix Heatmap',
+                                  xaxis_title='Predicted Class',
+                                  yaxis_title='True Class')
+
 
                 return dcc.Graph(id='classification-plot', figure=fig)
             #return fig, table
