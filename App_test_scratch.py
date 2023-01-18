@@ -18,11 +18,14 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.model_selection import GridSearchCV
 import sklearn.metrics
 from sklearn.metrics import precision_recall_curve
 #from sklearn.metrics import accuracy_score
 from sklearn.metrics import accuracy_score, f1_score, recall_score
+from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_auc_score
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
@@ -34,7 +37,7 @@ import datetime
 import numpy as np
 import io
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SUPERHERO])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SUPERHERO], suppress_callback_exceptions=True)
 
 
 def drawText():
@@ -2895,7 +2898,7 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
 
 
-            model = RandomForestClassifier()
+            #model = RandomForestClassifier()
 
 
             ####grid search CV
@@ -2932,13 +2935,13 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             ####grid search CV
 
 
-            model.fit(X_train, y_train)
+            #model.fit(X_train, y_train)
 
-            y_pred = model.predict(X_test)
+            #y_pred = model.predict(X_test)
 
-            probs = model.predict_proba(X_test)[:, 1]
+            #probs = model.predict_proba(X_test)[:, 1]
 
-            accuracy = accuracy_score(y_test, y_pred)
+            #accuracy = accuracy_score(y_test, y_pred)
 
             #colors = ['red', 'blue', 'green', 'yellow', 'black']
             #color_map = {y_pred[i]: colors[i] for i in range(len(y_pred))}
@@ -2949,6 +2952,16 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             n_classes = df[target_column].nunique()
 
             if n_classes <= 2:
+
+                model = RandomForestClassifier()
+
+                model.fit(X_train, y_train)
+
+                y_pred = model.predict(X_test)
+
+                probs = model.predict_proba(X_test)[:, 1]
+
+                accuracy = accuracy_score(y_test, y_pred)
 
                 fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_test, probs)
 
@@ -2981,20 +2994,7 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
                 fig.update_layout(title='ROC curve', xaxis_title='False Positive Rate',
                                   yaxis_title='True Positive Rate')
 
-                #accuracy = accuracy_score(y_test, y_pred)
-                #print(accuracy)
 
-                # Calculate the F1 score
-                #f1 = f1_score(y_test, y_pred)
-                #print(f1)
-                # Calculate the recall
-                #recall = recall_score(y_test, y_pred)
-                #print(recall)
-
-                # Calculate the classification report
-                #report = classification_report(y_test, y_pred, output_dict=True)
-
-                ###testing
 
                 # Calculate the precision, recall, and f1-score for each class
                 precision, recall, f1, support = precision_recall_fscore_support(y_test, y_pred)
@@ -3006,27 +3006,6 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
                 # Create a dictionary to hold the results
                 results = {}
                 classes = np.unique(y_test)
-
-                # Loop through the classes and add the results to the dictionary
-                #for class_index, class_name in enumerate(classes):
-                #    results[class_name] = {
-                #        "precision": precision[class_index],
-                #        "recall": recall[class_index],
-                #        "f1-score": f1[class_index],
-                #        "support": support[class_index]
-                #    }
-
-                #print(results)
-
-                # Add the overall accuracy to the results
-                #results["accuracy"] = accuracy
-
-                # Convert the results to a list of dictionaries
-                #report_data = [{"Class": class_name, "Precision": metrics["precision"], "Recall": metrics["recall"],
-                #                "F1-score": metrics["f1-score"], "Support": metrics["support"]} for class_name, metrics in
-                #               results.items()]
-
-                #print(report_data)
 
 
 
@@ -3074,49 +3053,99 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
 
             else:
 
-                #fpr = dict()
-                #tpr = dict()
-                #roc_auc = dict()
-                #for i in range(n_classes):
-                #    #fpr[i], tpr[i], _ = sklearn.metrics.roc_curve(y_test[:, i], probs[:, i])
-                #    fpr[i], tpr[i], _ = sklearn.metrics.roc_curve(y_test[:, i], probs[:, i])
-                #    roc_auc[i] = sklearn.metrics.auc(fpr[i], tpr[i])
+                clf = RandomForestClassifier(n_estimators=100)
 
-                # Create a scatter plot with multiple lines, one for each class
-                #fig = go.Figure()
-                #for i in range(n_classes):
-                #    fig.add_trace(go.Scatter(x=fpr[i], y=tpr[i], mode='lines',
-                #                             name='ROC curve of class {} (AUC = {:0.2f})'.format(i, roc_auc[i])))
+                # Create the OvA classifier
+                ovaclf = OneVsRestClassifier(clf)
 
-                # Add the diagonal line y=x for reference
-                #fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', line=dict(color='gray', dash='dash'),
-                #                         name='Random guessing'))
+                # Fit the OvA classifier
+                ovaclf.fit(X_train, y_train)
 
-                # Set the x and y axis labels and the title
-                #fig.update_layout(xaxis_title='False Positive Rate', yaxis_title='True Positive Rate',
-                #                  title='ROC curves for multiclass classification')
+                probs = ovaclf.predict_proba(X_test)
 
-                confusion_matrix = sklearn.metrics.confusion_matrix(y_test, y_pred)
-                print(confusion_matrix)
+                y_pred = ovaclf.predict(X_test)
 
-                unique_classes = np.unique(np.asarray(y_test))
-                print(unique_classes)
+                labels = np.unique(y_test)
 
-                # Create the heatmap trace
-                trace = go.Heatmap(z=confusion_matrix, x=unique_classes,
-                                   y=unique_classes, opacity = 0.3,
-                                   colorscale=[[0, 'blue'], [1, 'blue']], text=confusion_matrix.astype(int), texttemplate='%{text:.0f}')
+                fig = go.Figure()
 
-                # Create the figure
-                fig = go.Figure(data=[trace])
+                # Loop through each class and calculate the ROC curve
+                for label in labels:
+                    y_test_class = (y_test == label).astype(int)
+                    fpr, tpr, _ = sklearn.metrics.roc_curve(y_test_class, probs[:, label])
+                    roc_auc = auc(fpr, tpr)
+                    fig.add_trace(go.Scatter(x=fpr, y=tpr,
+                                             mode='lines',
+                                             name='ROC curve for class {} (AUC = {:.3f})'.format(label, roc_auc)))
 
-                # Update the layout
-                fig.update_layout(title='Confusion Matrix Heatmap',
-                                  xaxis_title='Predicted Class',
-                                  yaxis_title='True Class')
+                    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1],
+                                             mode='lines',
+                                             line=dict(color='red', dash='dash'),
+                                             showlegend=False))
+
+                    fig.update_layout(title='ROC Curves for Multi-Class Classification',
+                                      xaxis_title='False Positive Rate',
+                                      yaxis_title='True Positive Rate',
+                                      xaxis=dict(range=[-0.05, 1.05]),
+                                      yaxis=dict(range=[-0.05, 1.05]))
+                    fig.update_xaxes(showgrid=False)
+                    fig.update_yaxes(showgrid=False)
+                    fig.update_layout({
+                        'plot_bgcolor': 'rgba(0, 0, 0, 0)',
+                        'paper_bgcolor': 'rgba(0, 0, 0, 0)',
+                    })
+                    fig.update_layout(
+                        title={
+                            'y': 0.9,
+                            'x': 0.5,
+                            'xanchor': 'center',
+                            'yanchor': 'top'})
+                    fig.update_layout(title_font_color="white",
+                                      font_color="white")
+
+                acc = accuracy_score(y_test, y_pred)
+
+                test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)),
+                                       columns=list(X_test.columns) + ["target"])
+
+                # Add a new column with the predicted values
+                test_df["predictions"] = y_pred
+
+                table = dash_table.DataTable(
+                    id="table",
+                    columns=[{"name": col, "id": col} for col in test_df.columns],
+                    data=test_df.to_dict("records"),
+                    style_header={'backgroundColor': 'rgba(0,0,0,0)',
+                                  'color': 'white',
+                                  'fontWeight': 'bold',
+                                  'textAlign': 'center', },
+                    style_table={'overflowX': 'scroll'},
+                    style_cell={'minWidth': '180px', 'width': '180px',
+                                'maxWidth': '180px', 'whiteSpace': 'normal',
+                                'backgroundColor': 'rgba(0,0,0,0)',
+                                'color': 'white'},
+                    style_data_conditional=[
+                        {
+                            # Set the font color for all cells to black
+                            'if': {'column_id': 'all'},
+                            'color': 'white'
+                        },
+                        {
+                            # Set the font color for cells in the 'Name' column to white
+                            # when the row is highlighted
+                            'if': {'column_id': 'Name', 'row_index': 'odd'},
+                            'color': 'black'
+                        }
+                    ],
+                    editable=False,
+                    page_size=5,
+                    sort_mode='multi',
+                    sort_action='native',
+                    filter_action='native',
+                )
 
 
-                return dcc.Graph(id='classification-plot', figure=fig)
+                return dcc.Graph(id='classification-plot', figure=fig),"Accuracy: {:.3f}".format(acc), table
             #return fig, table
 
 
