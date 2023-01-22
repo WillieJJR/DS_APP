@@ -36,6 +36,7 @@ import base64
 import datetime
 import numpy as np
 import io
+from joblib import Memory
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SUPERHERO], suppress_callback_exceptions=True)
 
@@ -694,6 +695,10 @@ def update_output(list_of_contents, list_of_names, list_of_dates):
         return children
 
 
+location = './cachedir'
+memory = Memory(location, verbose=0)
+
+@memory.cache
 def parse_data(contents, filename):
     content_type, content_string = contents.split(',')
 
@@ -722,7 +727,6 @@ def parse_data(contents, filename):
 @app.callback(Output('intermediate-value', 'data'),
               Input('upload-data', 'contents'),
               State('upload-data', 'filename'),
-              # State('upload-data', 'last_modified'),
               prevent_initial_call=True)
 def update_store_output(contents, filename):
     if contents:
@@ -783,8 +787,6 @@ def show_popover(n_clicks_regress, n_clicks_class):
     else:
         return html.Div()
 
-
-###testing
 
 
 @app.callback(
@@ -2238,10 +2240,6 @@ def update_scatterplot(x_axis, y_axis, jsonified_cleaned_data, n_clicks):
                 html.Center(html.H4('Please make sure to select BOTH an X and Y variable to display Scatterplot')),
                 dcc.Loading(type='circle', children=[html.Div(id='loading-scatterplot')])
             ])
-    # else:
-    #    return html.Div([
-    #            html.Center(html.H4('Please make sure Scatter Plot button is active!'))
-    #        ])
 
 
 @app.callback(
@@ -2448,10 +2446,7 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_rf, json
                 else:
                     df = df.drop(columns=[feature])
 
-            # if not feature_columns:
-            #    return "Please select features"
-            # if not target_column:
-            #    return "Please select a target"
+
 
             # preprocessing step 1 - impute missing values
             df = impute_and_remove(df)
@@ -2533,7 +2528,6 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_rf, json
                 return html.Div([
                     html.Center(html.H2(
                         'This target variable is labeled as a Categorical Variable and therefore not appropriate to use for Regression.')),
-                    # dcc.Loading(type='circle', children=[html.Div(id='loading-corrplot')])
                 ])
             else:
                 pass
@@ -2555,10 +2549,6 @@ def update_regression_graph(n_clicks_regress, n_clicks_linear, n_clicks_rf, json
                 else:
                     df = df.drop(columns=[feature])
 
-            # if not feature_columns:
-            #    return "Please select features"
-            # if not target_column:
-            #    return "Please select a target"
 
             # preprocessing step 1 - impute missing values
             df = impute_and_remove(df)
@@ -2754,8 +2744,7 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             acc = "Best accuracy is {} with K = {}".format(np.max(test_accuracy),
                                                            1 + test_accuracy.index(np.max(test_accuracy)))
 
-            # accuracy = accuracy_score(y_test, predictions)
-            # print('Accuracy:', accuracy)
+
             print("check:", y_test)
             var = 'var'
             print(var)
@@ -2858,54 +2847,6 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             # split data
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
 
-            # model = RandomForestClassifier()
-
-            ####grid search CV
-
-            # param_grid = {
-            #    "n_estimators": [10, 50, 100],
-            #    "max_depth": [None, 5, 10],
-            #    "min_samples_split": [2, 5, 10],
-            #    "min_samples_leaf": [1, 2, 4]
-            # }
-
-            # Define the scoring metric
-            # scoring = "accuracy"
-
-            # Create the grid search object
-            # grid_search = GridSearchCV(model, param_grid, scoring=scoring)
-
-            # Fit the grid search object to the training data
-            # grid_search.fit(X_train, y_train)
-
-            # Print the best hyperparameters
-            # print("Best hyperparameters:", grid_search.best_params_)
-
-            # Get the best model
-            # best_model = grid_search.best_estimator_
-
-            # y_pred = best_model.predict(X_test)
-
-            # probs = best_model.predict_proba(X_test)
-
-            # Evaluate the best model on the test set
-            # accuracy = best_model.score(X_test, y_test)
-
-            ####grid search CV
-
-            # model.fit(X_train, y_train)
-
-            # y_pred = model.predict(X_test)
-
-            # probs = model.predict_proba(X_test)[:, 1]
-
-            # accuracy = accuracy_score(y_test, y_pred)
-
-            # colors = ['red', 'blue', 'green', 'yellow', 'black']
-            # color_map = {y_pred[i]: colors[i] for i in range(len(y_pred))}
-
-            # Map the colors to the markers in the scatter plot
-            # marker_colors = [color_map[pred] for pred in y_pred]
 
             n_classes = df[target_column].nunique()
 
@@ -2966,8 +2907,18 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
                 test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)),
                                        columns=list(X_test.columns) + ["target"])
 
+                test_df["target"] = test_df["target"].astype(int)
+
+                test_df["target"] = test_df["target"].apply(lambda x: le.inverse_transform([x])[0])
+
                 # Add a new column with the predicted values
                 test_df["predictions"] = y_pred
+                test_df["predictions"] = test_df["predictions"].astype(int)
+                test_df["predictions"] = test_df["predictions"].apply(lambda x: le.inverse_transform([x])[0])
+
+
+                # Add a new column with the predicted values
+                #test_df["predictions"] = y_pred
 
                 table = dash_table.DataTable(
                     id="table",
@@ -3062,8 +3013,15 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
                 test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)),
                                        columns=list(X_test.columns) + ["target"])
 
+
+                test_df["target"] = test_df["target"].astype(int)
+
+                test_df["target"] = test_df["target"].apply(lambda x: le.inverse_transform([x])[0])
+
                 # Add a new column with the predicted values
                 test_df["predictions"] = y_pred
+                test_df["predictions"] = test_df["predictions"].astype(int)
+                test_df["predictions"] = test_df["predictions"].apply(lambda x: le.inverse_transform([x])[0])
 
                 table = dash_table.DataTable(
                     id="table",
