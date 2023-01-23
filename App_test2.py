@@ -682,7 +682,7 @@ def standardize_inputs_class(df, target_column, scale=True):
     else:
         df_scaled[numeric_columns] = scaler.inverse_transform(df_scaled[numeric_columns])
 
-    return df_scaled
+    return df_scaled, scaler
 
 
 @app.callback(Output('output-data-upload', 'children'),
@@ -2832,7 +2832,7 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
 
             df = impute_and_remove(df)
 
-            df = standardize_inputs_class(df, target_column)
+            df, scaler = standardize_inputs_class(df, target_column)
 
             X = df[combined_columns]  # this already has the chosen columns just named after the OHE
             y = df[target_column]
@@ -2847,6 +2847,9 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             # split data
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
 
+            #scaler.fit(X_test)
+            #X_test_original = scaler.inverse_transform(X_test)
+            #print(X_test_original)
 
             n_classes = df[target_column].nunique()
 
