@@ -2677,25 +2677,29 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
 
             df = impute_and_remove(df)
 
-            df = standardize_inputs_class(df, target_column)
+            df, scaler = standardize_inputs_class(df, target_column)
+            print('After standardize')
 
             X = df[combined_columns]  # this already has the chosen columns just named after the OHE
+            #X = df[list(combined_columns)]
             y = df[target_column]
 
             # encode target vars
             le = LabelEncoder()
             y_encoded = le.fit_transform(y)
+            print(y_encoded)
 
             # split data
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
 
             # Model complexity
-            neighboors = np.arange(1, 30)
+            neighbors = np.arange(1, 30)
             train_accuracy = []
             test_accuracy = []
+            print('After partition')
 
             # Loop over different values of k
-            for i, k in enumerate(neighboors):
+            for i, k in enumerate(neighbors):
                 # k from 1 to 30(exclude)
                 knn = KNeighborsClassifier(n_neighbors=k)
                 # fit with knn
@@ -2704,7 +2708,7 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
                 test_accuracy.append(knn.score(X_test, y_test))
 
             max_test_accuracy = np.max(test_accuracy)
-            best_k = neighboors[np.argmax(test_accuracy)]
+            best_k = neighbors[np.argmax(test_accuracy)]
             print(best_k)
 
             best_knn = KNeighborsClassifier(n_neighbors=best_k)
@@ -2714,7 +2718,7 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             # print(predictions)
 
             trace1 = go.Scatter(
-                x=neighboors,
+                x=neighbors,
                 y=train_accuracy,
                 mode="lines",
                 name="train_accuracy",
@@ -2722,7 +2726,7 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
                 text="train_accuracy")
             # Creating trace2
             trace2 = go.Scatter(
-                x=neighboors,
+                x=neighbors,
                 y=test_accuracy,
                 mode="lines+markers",
                 name="test_accuracy",
@@ -2744,7 +2748,8 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             acc = "Best accuracy is {} with K = {}".format(np.max(test_accuracy),
                                                            1 + test_accuracy.index(np.max(test_accuracy)))
 
-
+            # accuracy = accuracy_score(y_test, predictions)
+            # print('Accuracy:', accuracy)
             print("check:", y_test)
             var = 'var'
             print(var)
@@ -2755,10 +2760,24 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             results["Predicted"] = y_pred
             print(results)
 
+
+
             test_df = pd.DataFrame(data=np.column_stack((X_test, y_test)), columns=list(X_test.columns) + ["target"])
+
+            test_df["target"] = test_df["target"].astype(int)
+
+            test_df["target"] = test_df["target"].apply(lambda x: le.inverse_transform([x])[0])
 
             # Add a new column with the predicted values
             test_df["predictions"] = y_pred
+            test_df["predictions"] = test_df["predictions"].astype(int)
+            test_df["predictions"] = test_df["predictions"].apply(lambda x: le.inverse_transform([x])[0])
+
+            # Get the true values and predictions columns
+            columns_to_display = ['target', 'predictions']
+
+            # Subset the DataFrame to only show the true values and predictions columns
+            test_df = test_df.loc[:, columns_to_display]
 
             table = dash_table.DataTable(
                 id="table",
@@ -2833,8 +2852,10 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             df = impute_and_remove(df)
 
             df, scaler = standardize_inputs_class(df, target_column)
+            print(df.columns)
 
             X = df[combined_columns]  # this already has the chosen columns just named after the OHE
+            print(X)
             y = df[target_column]
 
             # encode target vars
@@ -2848,8 +2869,21 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
 
             #scaler.fit(X_test)
-            #X_test_original = scaler.inverse_transform(X_test)
+            #X_test_original = scaler.inverse_transform(X_test[combined_columns])
             #print(X_test_original)
+
+            #x_test_chk = X_test[combined_columns]
+            #print(x_test_chk)
+
+
+
+
+            #common_columns = set(df.columns).intersection(set(X_test.columns))
+
+            #X_original = scaler.inverse_transform(df[common_columns])
+            #subset_df = X_test[common_columns]
+            #X_original = scaler.inverse_transform(subset_df)
+            #print(X_original)
 
             n_classes = df[target_column].nunique()
 
@@ -2919,6 +2953,11 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
                 test_df["predictions"] = test_df["predictions"].astype(int)
                 test_df["predictions"] = test_df["predictions"].apply(lambda x: le.inverse_transform([x])[0])
 
+                # Get the true values and predictions columns
+                columns_to_display = ['target', 'predictions']
+
+                # Subset the DataFrame to only show the true values and predictions columns
+                test_df = test_df.loc[:, columns_to_display]
 
                 # Add a new column with the predicted values
                 #test_df["predictions"] = y_pred
@@ -3025,6 +3064,12 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
                 test_df["predictions"] = y_pred
                 test_df["predictions"] = test_df["predictions"].astype(int)
                 test_df["predictions"] = test_df["predictions"].apply(lambda x: le.inverse_transform([x])[0])
+
+                # Get the true values and predictions columns
+                columns_to_display = ['target', 'predictions']
+
+                # Subset the DataFrame to only show the true values and predictions columns
+                test_df = test_df.loc[:, columns_to_display]
 
                 table = dash_table.DataTable(
                     id="table",
