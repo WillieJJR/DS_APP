@@ -6,6 +6,7 @@ from dash import html as html
 import dash_bootstrap_components as dbc
 # from dash_core_components import set_theme
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 import pandas as pd
 from scipy.stats import linregress
 from sklearn.ensemble import RandomForestClassifier
@@ -901,6 +902,8 @@ def kpi_four(value, contents, filename):
         return f'''{no_contents}'''
 
 
+
+
 #######Button resets for Feature Exploration#########
 
 @app.callback(
@@ -1415,42 +1418,44 @@ def update_button_style_svm(n_clicks_lr, n_clicks_rf):
     Output('svm-button', 'style'),
     [Input('svm-button', 'n_clicks'), Input('rfclass-button', 'n_clicks')]
 )
+
+
 def update_button_style_svm(n_clicks_svm, n_clicks_rfclass):
-    if n_clicks_rfclass is not None and n_clicks_rfclass % 2 == 1:
-        return {
-            'backgroundColor': 'rgba(211, 211, 211, 0.5)',
-            'color': 'white',
-            'text-align': 'center',
-            # 'margin-right': '10px',  # add a right margin to create a space between the buttons
-            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
-            'height': '30px',  # set the height of the buttons
-            'width': '200px',  # set the width of the buttons
-            'font-size': '16px'  # set the font size of the button labels
-        }
-    elif n_clicks_svm is not None and n_clicks_svm % 2 == 1:
-        # Change the style of button-2 to active when it is clicked an odd number of times
-        return {
-            'backgroundColor': 'rgba(0, 255, 0, 0.5)',
-            'color': 'white',
-            'text-align': 'center',
-            # 'margin-right': '10px',  # add a right margin to create a space between the buttons
-            'border-radius': '0%',  # set the border radius to 50% to make the buttons round
-            'height': '30px',  # set the height of the buttons
-            'width': '200px',  # set the width of the buttons
-            'font-size': '16px'  # set the font size of the button labels
-        }
-    else:
-        # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
-        return {
-            'backgroundColor': 'rgba(0,0,0,0.3)',
-            'color': 'white',
-            'text-align': 'center',
-            # 'margin-right': '10px',  # add a right margin to create a space between the buttons
-            'border-radius': '7%',  # set the border radius to 50% to make the buttons round
-            'height': '30px',  # set the height of the buttons
-            'width': '200px',  # set the width of the buttons
-            'font-size': '16px'  # set the font size of the button labels
-        }
+        if n_clicks_rfclass is not None and n_clicks_rfclass % 2 == 1:
+            return {
+                'backgroundColor': 'rgba(211, 211, 211, 0.5)',
+                'color': 'white',
+                'text-align': 'center',
+                # 'margin-right': '10px',  # add a right margin to create a space between the buttons
+                'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+                'height': '30px',  # set the height of the buttons
+                'width': '200px',  # set the width of the buttons
+                'font-size': '16px'  # set the font size of the button labels
+            }
+        elif n_clicks_svm is not None and n_clicks_svm % 2 == 1:
+            # Change the style of button-2 to active when it is clicked an odd number of times
+            return {
+                'backgroundColor': 'rgba(0, 255, 0, 0.5)',
+                'color': 'white',
+                'text-align': 'center',
+                # 'margin-right': '10px',  # add a right margin to create a space between the buttons
+                'border-radius': '0%',  # set the border radius to 50% to make the buttons round
+                'height': '30px',  # set the height of the buttons
+                'width': '200px',  # set the width of the buttons
+                'font-size': '16px'  # set the font size of the button labels
+            }
+        else:
+            # Reset the style of button-2 to the default when none of the other buttons are clicked an odd number of times
+            return {
+                'backgroundColor': 'rgba(0,0,0,0.3)',
+                'color': 'white',
+                'text-align': 'center',
+                # 'margin-right': '10px',  # add a right margin to create a space between the buttons
+                'border-radius': '7%',  # set the border radius to 50% to make the buttons round
+                'height': '30px',  # set the height of the buttons
+                'width': '200px',  # set the width of the buttons
+                'font-size': '16px'  # set the font size of the button labels
+            }
 
 
 @app.callback(
@@ -3110,3 +3115,4 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
 
 if __name__ == "__main__":
     app.run_server(debug=True)
+    #app.run_server(debug=True)
