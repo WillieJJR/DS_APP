@@ -2691,7 +2691,7 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
 
             # Model complexity
-            neighbors = np.arange(1, 5)
+            neighbors = np.arange(1, 10)
             train_accuracy = []
             test_accuracy = []
             print('After partition')
