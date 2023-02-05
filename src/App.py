@@ -40,7 +40,7 @@ import io
 from joblib import Memory
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SUPERHERO], suppress_callback_exceptions=True)
-
+server = app.server
 
 def drawText():
     return html.Div([
