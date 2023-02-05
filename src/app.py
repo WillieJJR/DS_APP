@@ -251,7 +251,7 @@ button_rf_regress = html.Button("Random Forest Model", id="randomforest-button",
                                 }
                                 )
 
-button_svm = html.Button("SVM Model", id="svm-button",
+button_svm = html.Button("KNN Model", id="svm-button",
                          n_clicks=0,
                          n_clicks_timestamp=0,
                          style={
@@ -2691,7 +2691,7 @@ def update_classification_graph(n_clicks_class, n_clicks_svm, n_clicks_rfclass, 
             X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, random_state=10)
 
             # Model complexity
-            neighbors = np.arange(1, 30)
+            neighbors = np.arange(1, 15)
             train_accuracy = []
             test_accuracy = []
             print('After partition')
