@@ -4,7 +4,7 @@ This is a Python Dash application that allows users to analyze their own data by
 <span style="color:red"><strong> Please see caveats at the end! </strong></span>
 
 ### Variable Descriptions
-This section provides information on the characteristics of the variables in the user's data. The user can view: the number of unique values in a column, the Percentage of null values, the data type, and the Mode/Median value of each variable.
+This section provides information on the characteristics of the variables in the user's data. The user can view: 
 <ol>
   <li>Number of unique values in a column</li>
   <li>Percentage of null values</li>
