@@ -41,7 +41,7 @@ This section allows the user to run regression and classification models on thei
   <li>Automatically imputes mean values for missing continuous features and mode for discreet features.</li>
   <li>Automatically drops any features with high cardinality (more than 4 distinct values) to increase efficiency of preprocessing and reduce the impact of high dimensionality.</li>
   <li>Still working through some bugs that have been displayed since production, one of which includes the inability to inverse Label Encoders for Boolean values.</li>
-  <li>This was a project made for fun to test the waters of the (free version) Dash framework (https://plotly.com/), and I didn't take it too seriously, so neither should you! .</li>
+  <li>This was a project made for fun to test the waters of the (free version) Dash framework (https://plotly.com/), and I didn't take it too seriously, so neither should you! </li>
 </ol>
 
 
